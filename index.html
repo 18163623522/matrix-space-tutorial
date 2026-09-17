@@ -1,0 +1,2492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>矩阵与空间变换 · 用一个点和一支箭头看懂</title>
+<script>
+// 尽早应用主题，避免闪烁
+(function() {
+  try {
+    var s = localStorage.getItem('mst-theme');
+    if (!s) s = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    if (s === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  } catch (e) {}
+})();
+</script>
+<style>
+/* ==========================================================
+   设计系统 —— 与《顶点数据×PBR》《实时渲染》同款（赛博玻璃风）
+   ========================================================== */
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #11111a;
+  --bg-tertiary: #1a1a26;
+  --bg-card: #14141f;
+  --bg-card-hover: #1c1c2a;
+
+  --text-primary: #e8e8f0;
+  --text-secondary: #9090a8;
+  --text-tertiary: #686880;
+  --text-link: #39d2c0;
+  --text-link-hover: #5ce0d0;
+
+  --accent-blue: #39d2c0;
+  --accent-green: #3fb950;
+  --accent-orange: #ffb454;
+  --accent-red: #ff6b6b;
+  --accent-purple: #7aa2f7;
+  --accent-cyan: #39d2c0;
+
+  --border-primary: rgba(255,255,255,0.08);
+  --border-secondary: rgba(255,255,255,0.05);
+  --border-accent: #39d2c0;
+
+  --code-bg: #0d0d14;
+  --code-inline-bg: #1a1a26;
+
+  --canvas-bg: #0d0d14;
+
+  --sidebar-width: 300px;
+  --content-max-width: 960px;
+  --header-height: 56px;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --shadow-card: 0 8px 32px -8px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
+  --shadow-card-hover: 0 16px 48px -12px rgba(0,0,0,0.7), 0 0 0 1px rgba(57,210,192,0.15);
+
+  --transition-fast: 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+  --transition-normal: 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+
+  --glow-cyan: rgba(57,210,192,0.15);
+  --glow-blue: rgba(122,162,247,0.10);
+}
+[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f6f8fa;
+  --bg-tertiary: #e1e4e8;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f0f2f5;
+  --text-primary: #24292e;
+  --text-secondary: #586069;
+  --text-tertiary: #6a737d;
+  --text-link: #0366d6;
+  --text-link-hover: #005cc5;
+  --accent-blue: #0366d6;
+  --accent-green: #1a7f37;
+  --accent-orange: #bc5e0a;
+  --accent-red: #cf222e;
+  --accent-purple: #5762a4;
+  --accent-cyan: #067d8d;
+  --border-primary: #d0d7de;
+  --border-secondary: #e1e4e8;
+  --border-accent: #0366d6;
+  --code-bg: #f6f8fa;
+  --code-inline-bg: #eff2f5;
+  --canvas-bg: #f6f8fa;
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-card-hover: 0 4px 16px rgba(0,0,0,0.12);
+  --glow-cyan: rgba(3,102,214,0.05);
+  --glow-blue: rgba(87,98,164,0.05);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; font-size: 16px; }
+
+body {
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  background-color: var(--bg-primary);
+  background-image:
+    radial-gradient(ellipse 70% 50% at 15% 0%, var(--glow-cyan), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 85% 25%, var(--glow-blue), transparent 55%),
+    radial-gradient(ellipse 80% 40% at 50% 100%, var(--glow-cyan), transparent 60%);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  line-height: 1.8;
+  overflow-x: hidden;
+  position: relative;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.02;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--bg-tertiary); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+a { color: var(--text-link); text-decoration: none; transition: color var(--transition-fast); }
+a:hover { color: var(--text-link-hover); text-decoration: underline; }
+ul, ol { margin: 12px 0 16px 24px; color: var(--text-secondary); }
+li { margin-bottom: 8px; line-height: 1.7; font-size: 15px; }
+li::marker { color: var(--accent-blue); }
+p { margin: 12px 0; font-size: 15px; color: var(--text-secondary); line-height: 1.9; }
+strong { color: var(--text-primary); font-weight: 600; }
+em { color: var(--text-primary); font-style: normal; border-bottom: 1px dashed var(--accent-blue); padding-bottom: 1px; }
+
+/* ---- 阅读进度 & 浮动按钮 ---- */
+#readingProgress {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+  z-index: 1000; box-shadow: 0 0 12px rgba(57,210,192,0.6);
+}
+.menu-toggle, .theme-toggle {
+  position: fixed; z-index: 999; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--bg-card); border: 1px solid var(--border-primary);
+  color: var(--text-secondary); font-size: 18px; cursor: pointer;
+  box-shadow: var(--shadow-card); transition: all var(--transition-fast);
+  display: flex; align-items: center; justify-content: center;
+}
+.menu-toggle:hover, .theme-toggle:hover { color: var(--accent-blue); border-color: var(--border-accent); }
+.menu-toggle { top: 12px; left: 12px; display: none; }
+.theme-toggle { top: 12px; right: 12px; }
+.sidebar-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px);
+  z-index: 997; opacity: 0; pointer-events: none; transition: opacity var(--transition-normal);
+}
+.sidebar-overlay.show { opacity: 1; pointer-events: auto; }
+
+/* ---- 侧边栏 ---- */
+.sidebar {
+  position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-width);
+  background: var(--bg-secondary); border-right: 1px solid var(--border-primary);
+  overflow-y: auto; z-index: 998; padding: 24px 16px;
+  transition: transform var(--transition-normal);
+}
+.sidebar-header { padding: 8px 12px 16px; border-bottom: 1px solid var(--border-secondary); margin-bottom: 16px; }
+.sidebar-header h2 { font-size: 17px; color: var(--text-primary); font-weight: 700; }
+.sidebar-header .subtitle { font-size: 11px; color: var(--text-tertiary); letter-spacing: 1px; margin-top: 4px; }
+.sidebar-search { margin-bottom: 12px; }
+.sidebar-search input {
+  width: 100%; padding: 8px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-primary); background: var(--bg-primary);
+  color: var(--text-primary); font-size: 13px; outline: none;
+  transition: border-color var(--transition-fast);
+}
+.sidebar-search input:focus { border-color: var(--border-accent); }
+.nav-section { margin-bottom: 18px; }
+.nav-section-title {
+  font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 1px;
+  padding: 0 12px; margin-bottom: 6px; font-weight: 600;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: var(--radius-sm);
+  color: var(--text-secondary); font-size: 13px; text-decoration: none;
+  transition: all var(--transition-fast); border-left: 2px solid transparent;
+}
+.nav-item:hover { background: var(--bg-card-hover); color: var(--text-primary); text-decoration: none; }
+.nav-item.active { background: rgba(57,210,192,0.08); color: var(--accent-blue); border-left-color: var(--accent-blue); }
+.nav-item .chapter-num {
+  font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; color: var(--text-tertiary);
+  background: var(--bg-tertiary); padding: 1px 6px; border-radius: 4px; flex-shrink: 0; min-width: 26px; text-align: center;
+}
+.nav-item.active .chapter-num { color: var(--accent-blue); background: rgba(57,210,192,0.12); }
+
+/* ---- 主内容 ---- */
+.main-content { margin-left: var(--sidebar-width); position: relative; z-index: 2; }
+.content-wrapper { max-width: var(--content-max-width); margin: 0 auto; padding: 40px 48px 80px; }
+
+.hero { text-align: center; padding: 64px 24px 48px; }
+.hero h1 { font-size: 40px; font-weight: 800; letter-spacing: 1px; color: var(--text-primary); margin-bottom: 16px; }
+.hero h1 .highlight { color: var(--accent-blue); text-shadow: 0 0 24px rgba(57,210,192,0.4); }
+.hero .tagline { font-size: 16px; color: var(--text-secondary); margin-bottom: 24px; }
+.hero .meta { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.hero .badge {
+  font-size: 12px; color: var(--accent-blue); background: rgba(57,210,192,0.08);
+  border: 1px solid rgba(57,210,192,0.2); border-radius: 999px; padding: 4px 14px;
+}
+
+section { margin-bottom: 64px; }
+.section-header {
+  font-size: 26px; font-weight: 700; color: var(--text-primary);
+  padding-bottom: 12px; border-bottom: 1px solid var(--border-primary); margin-bottom: 24px;
+  display: flex; align-items: baseline; gap: 12px;
+}
+.section-header .sec-no {
+  font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 15px;
+  color: var(--accent-blue); background: rgba(57,210,192,0.08);
+  padding: 2px 10px; border-radius: 6px; border: 1px solid rgba(57,210,192,0.2);
+}
+h3.sub-header {
+  font-size: 19px; font-weight: 650; color: var(--text-primary); margin: 32px 0 12px;
+  padding-left: 12px; border-left: 3px solid var(--accent-blue);
+}
+h4.minor-header { font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 24px 0 8px; }
+
+.chapter-epigraph {
+  text-align: center; margin: 0 0 24px; padding: 16px;
+  font-style: italic; font-size: 14px; color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+/* ---- 表格 ---- */
+table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+th { background: var(--bg-tertiary); color: var(--text-primary); font-weight: 600; text-align: left; padding: 10px 14px; border: 1px solid var(--border-primary); font-size: 13px; }
+td { padding: 10px 14px; border: 1px solid var(--border-primary); color: var(--text-secondary); font-size: 13px; vertical-align: top; }
+tr:hover td { background: var(--bg-card); }
+
+/* ---- 术语 ---- */
+.term-list { list-style: none; margin-left: 0; padding: 0; }
+.term-item {
+  padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm); margin-bottom: 8px;
+  font-size: 14px; color: var(--text-secondary); line-height: 1.7;
+}
+.term-item:hover { border-color: var(--border-accent); }
+.term-item strong { color: var(--accent-blue); margin-right: 8px; }
+
+/* ---- Callout ---- */
+.callout { padding: 16px 20px; border-radius: var(--radius-sm); margin: 16px 0; border-left: 4px solid; font-size: 14px; line-height: 1.7; }
+.callout-info { background: rgba(57,210,192,0.08); border-left-color: var(--accent-blue); color: var(--text-secondary); }
+.callout-info strong { color: var(--accent-blue); }
+.callout-tip { background: rgba(63,185,80,0.08); border-left-color: var(--accent-green); color: var(--text-secondary); }
+.callout-tip strong { color: var(--accent-green); }
+.callout-warning { background: rgba(210,153,34,0.08); border-left-color: var(--accent-orange); color: var(--text-secondary); }
+.callout-warning strong { color: var(--accent-orange); }
+.callout-important { background: rgba(248,81,73,0.08); border-left-color: var(--accent-red); color: var(--text-secondary); }
+.callout-important strong { color: var(--accent-red); }
+.callout-analogy { background: rgba(122,162,247,0.08); border-left-color: var(--accent-purple); color: var(--text-secondary); }
+.callout-analogy strong { color: var(--accent-purple); }
+
+.key-point {
+  display: flex; gap: 12px; padding: 16px 20px;
+  background: rgba(63,185,80,0.06); border: 1px solid rgba(63,185,80,0.15);
+  border-radius: var(--radius-sm); margin: 12px 0; align-items: flex-start;
+}
+.key-point .kp-icon { font-size: 20px; flex-shrink: 0; line-height: 1.5; }
+.key-point .kp-content { flex: 1; }
+.key-point .kp-title { font-size: 14px; font-weight: 600; color: var(--accent-green); margin-bottom: 4px; }
+.key-point .kp-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
+
+.knowledge-box { background: rgba(57,210,192,0.06); border: 1px solid rgba(57,210,192,0.2); border-radius: var(--radius-md); padding: 20px 24px; margin: 20px 0; }
+.knowledge-box .kb-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--accent-blue); margin-bottom: 12px; }
+.knowledge-box .kb-title::before { content: '💡'; }
+.knowledge-box p, .knowledge-box li { font-size: 14px; color: var(--text-secondary); line-height: 1.8; }
+
+/* ---- 公式 ---- */
+.formula-block {
+  text-align: center; font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+  font-size: 15px; color: var(--accent-cyan);
+  background: rgba(57,210,192,0.05); border: 1px solid rgba(57,210,192,0.15);
+  border-radius: var(--radius-sm); padding: 16px 24px; margin: 20px 0;
+  overflow-x: auto; white-space: nowrap; letter-spacing: 0.5px;
+}
+.formula-block .formula-name {
+  display: block; font-size: 11px; color: var(--text-tertiary); margin-bottom: 8px;
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif; letter-spacing: 0;
+}
+
+code { font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace; font-size: 13px; }
+p code, li code {
+  background: var(--code-inline-bg); padding: 2px 6px; border-radius: 4px;
+  border: 1px solid var(--border-primary); color: var(--accent-orange); font-size: 0.9em;
+}
+
+/* ---- 矩阵显示 ---- */
+.mx-wrap { display: flex; align-items: stretch; justify-content: center; margin: 10px 0; }
+.mx-b { width: 8px; border: 2.5px solid var(--text-secondary); }
+.mx-b.l { border-right: none; border-radius: 3px 0 0 3px; }
+.mx-b.r { border-left: none; border-radius: 0 3px 3px 0; }
+table.mx { border-collapse: collapse; margin: 0; }
+table.mx td {
+  border: none; padding: 6px 14px; text-align: right;
+  font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 15px;
+  font-variant-numeric: tabular-nums; color: var(--text-primary);
+  min-width: 74px; background: transparent !important;
+}
+table.mx td.cx { color: var(--accent-orange); }
+table.mx td.cy { color: var(--accent-green); }
+table.mx td.cz { color: var(--accent-cyan); }
+table.mx td.ct { color: var(--accent-purple); }
+table.mx td.ghost { color: var(--text-tertiary); }
+table.mx.dim td { opacity: 0.45; }
+.mx-caption { text-align: center; font-size: 12px; color: var(--text-tertiary); margin-bottom: 8px; }
+
+/* ---- 数值推演面板 ---- */
+.num-panel {
+  background: var(--code-bg); border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm); padding: 14px 18px; margin: 14px 0;
+  font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 13.5px;
+  line-height: 2.1; font-variant-numeric: tabular-nums;
+  color: var(--text-secondary); overflow-x: auto; white-space: nowrap;
+}
+.num-panel .nx { color: var(--accent-orange); }
+.num-panel .ny { color: var(--accent-green); }
+.num-panel .nz { color: var(--accent-cyan); }
+.num-panel .nt { color: var(--accent-purple); }
+.num-panel .np { color: var(--accent-red); font-weight: 600; }
+.num-panel .dim { color: var(--text-tertiary); }
+.num-panel hr { border: none; border-top: 1px dashed var(--border-primary); margin: 6px 0; }
+
+/* ---- 演示卡片 ---- */
+.demo-card {
+  background: var(--bg-card); border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg); margin: 24px 0; overflow: hidden;
+  box-shadow: var(--shadow-card); transition: all var(--transition-normal);
+}
+.demo-card:hover { box-shadow: var(--shadow-card-hover); border-color: rgba(57,210,192,0.3); }
+.demo-title {
+  padding: 14px 20px; font-size: 14px; font-weight: 600; color: var(--accent-blue);
+  border-bottom: 1px solid var(--border-secondary);
+  display: flex; align-items: center; gap: 8px;
+}
+.demo-title::before { content: '▶'; font-size: 10px; }
+.demo-description { padding: 12px 20px; font-size: 13px; color: var(--text-tertiary); border-bottom: 1px solid var(--border-secondary); line-height: 1.6; }
+.demo-controls { padding: 16px 20px; background: var(--bg-secondary); border-top: 1px solid var(--border-primary); }
+.demo-controls label { display: block; font-size: 12px; color: var(--text-tertiary); margin-bottom: 6px; font-weight: 500; }
+.demo-controls label.inline-cb { display: inline-flex; align-items: center; gap: 6px; margin: 6px 14px 6px 0; cursor: pointer; font-size: 13px; color: var(--text-secondary); }
+.demo-controls .slider-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.demo-controls .slider-row > label { margin-bottom: 0; min-width: 92px; }
+.demo-controls .slider-row input[type="range"] { flex: 1; min-width: 140px; }
+.slider-value {
+  font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 12.5px; color: var(--accent-cyan);
+  background: var(--code-inline-bg); border: 1px solid var(--border-primary);
+  padding: 2px 8px; border-radius: 4px; min-width: 56px; text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.demo-controls input[type="range"] {
+  -webkit-appearance: none; appearance: none; height: 4px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+  outline: none; cursor: pointer;
+}
+.demo-controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--bg-card); border: 2px solid var(--accent-blue); cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4); transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+.demo-controls input[type="range"]::-webkit-slider-thumb:hover { box-shadow: 0 0 0 6px rgba(57,210,192,0.15); transform: scale(1.15); }
+.demo-controls .btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--bg-primary); border: 1px solid var(--border-primary);
+  color: var(--text-secondary); font-size: 12.5px; padding: 6px 14px;
+  border-radius: var(--radius-sm); cursor: pointer; margin: 4px 6px 4px 0;
+  transition: all var(--transition-fast); font-family: inherit;
+}
+.demo-controls .btn:hover { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+.demo-controls .btn.active { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+.demo-tip { padding: 10px 20px 14px; font-size: 12.5px; color: var(--text-tertiary); line-height: 1.7; border-top: 1px dashed var(--border-secondary); }
+.demo-tip::before { content: '💡 '; }
+.canvas-box { padding: 12px 12px 4px; display: flex; justify-content: center; background: var(--bg-secondary); }
+.canvas-box canvas { width: 100%; height: auto; border-radius: 8px; background: var(--canvas-bg); display: block; touch-action: none; }
+.demo-flex { display: flex; gap: 0; flex-wrap: wrap; }
+.demo-flex .df-left { flex: 1 1 420px; min-width: 320px; }
+.demo-flex .df-right {
+  flex: 0 0 300px; padding: 16px 18px; border-left: 1px solid var(--border-secondary);
+  background: var(--bg-secondary); display: flex; flex-direction: column; justify-content: center; gap: 8px;
+}
+@media (max-width: 800px) { .demo-flex .df-right { border-left: none; border-top: 1px solid var(--border-secondary); flex-basis: 100%; } }
+
+/* ---- 阶段面板（链式演示） ---- */
+.stage-list { display: flex; flex-direction: column; gap: 6px; }
+.stage-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  border: 1px solid var(--border-primary); border-radius: var(--radius-sm);
+  background: var(--bg-card); opacity: 0.55; transition: all var(--transition-fast);
+  font-size: 12.5px; cursor: pointer; flex-wrap: wrap;
+}
+.stage-row.done { opacity: 0.8; border-color: rgba(63,185,80,0.3); }
+.stage-row.active { opacity: 1; border-color: var(--accent-blue); background: rgba(57,210,192,0.08); box-shadow: 0 0 0 1px rgba(57,210,192,0.2); }
+.stage-row .st-no {
+  font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; color: var(--text-tertiary);
+  background: var(--bg-tertiary); border-radius: 4px; padding: 1px 7px; flex-shrink: 0;
+}
+.stage-row.active .st-no { color: #fff; background: var(--accent-blue); }
+.stage-row .st-name { font-weight: 600; color: var(--text-primary); min-width: 88px; }
+.stage-row .st-val {
+  font-family: 'JetBrains Mono', 'Consolas', monospace; font-variant-numeric: tabular-nums;
+  color: var(--accent-cyan); font-size: 12.5px;
+}
+.stage-row .st-mat { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 10.5px; color: var(--text-tertiary); line-height: 1.5; white-space: pre; }
+
+/* ---- 读数芯片 ---- */
+.chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--code-bg); border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm); padding: 5px 12px; font-size: 12.5px; color: var(--text-secondary);
+  font-family: 'JetBrains Mono', 'Consolas', monospace; font-variant-numeric: tabular-nums;
+}
+.chip .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.chip b { color: var(--text-primary); font-weight: 600; }
+
+/* ---- 测验 ---- */
+.quiz-box {
+  background: rgba(63,185,80,0.05); border: 1px solid rgba(63,185,80,0.2);
+  border-radius: var(--radius-md); padding: 18px 22px; margin: 20px 0;
+}
+.quiz-box .quiz-title { font-size: 13px; font-weight: 600; color: var(--accent-green); margin-bottom: 10px; }
+.quiz-box .quiz-title::before { content: '✏️ '; }
+.quiz-q { font-size: 14px; color: var(--text-primary); margin-bottom: 10px; font-weight: 500; }
+.quiz-opt {
+  display: block; width: 100%; text-align: left; margin-bottom: 6px;
+  background: var(--bg-card); border: 1px solid var(--border-primary);
+  color: var(--text-secondary); font-size: 13px; padding: 8px 14px;
+  border-radius: var(--radius-sm); cursor: pointer; transition: all var(--transition-fast);
+  font-family: inherit; line-height: 1.6;
+}
+.quiz-opt:hover { border-color: var(--accent-green); color: var(--text-primary); }
+.quiz-opt.right { border-color: var(--accent-green); background: rgba(63,185,80,0.12); color: var(--accent-green); font-weight: 600; }
+.quiz-opt.wrong { border-color: var(--accent-red); background: rgba(248,81,73,0.08); color: var(--accent-red); }
+.quiz-explain { display: none; margin-top: 10px; font-size: 13px; color: var(--text-secondary); line-height: 1.7; padding: 10px 14px; background: var(--bg-secondary); border-radius: var(--radius-sm); }
+.quiz-box.answered .quiz-explain { display: block; }
+
+/* ---- 流程图（空间关系图） ---- */
+.space-map { display: flex; justify-content: center; margin: 16px 0; overflow-x: auto; }
+.space-map svg { max-width: 100%; height: auto; }
+
+/* ---- 页脚 ---- */
+.site-footer {
+  text-align: center; padding: 40px 24px 48px; color: var(--text-tertiary);
+  font-size: 12.5px; border-top: 1px solid var(--border-secondary); margin-top: 40px; line-height: 2;
+}
+
+/* ---- 响应式 ---- */
+@media (max-width: 1024px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); box-shadow: 20px 0 60px rgba(0,0,0,0.5); }
+  .menu-toggle { display: flex; }
+  .main-content { margin-left: 0; }
+  .content-wrapper { padding: 32px 20px 60px; }
+  .hero h1 { font-size: 30px; }
+}
+</style>
+</head>
+<body>
+
+<div id="readingProgress"></div>
+<button class="menu-toggle" onclick="toggleSidebar()" aria-label="菜单">&#9776;</button>
+<button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="切换主题" title="切换暗/亮主题">&#9790;</button>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<!-- ============================================================
+     侧边栏
+     ============================================================ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h2>矩阵与空间变换</h2>
+    <div class="subtitle">A Point &amp; An Arrow</div>
+  </div>
+  <div class="sidebar-search">
+    <input type="text" id="sidebarSearch" placeholder="搜索小节..." oninput="filterSidebar()" aria-label="搜索小节">
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-section-title">开始</div>
+      <a href="#intro" class="nav-item"><span class="chapter-num">00</span>前言 · 矩阵为什么难懂</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">第一章 · 箭头</div>
+      <a href="#ch1-start" class="nav-item"><span class="chapter-num">1.0</span>课程概览</a>
+      <a href="#ch1-1" class="nav-item"><span class="chapter-num">1.1</span>一支箭头：尖端落点就是答案</a>
+      <a href="#ch1-2" class="nav-item"><span class="chapter-num">1.2</span>第二支箭头：凑齐矩阵两列</a>
+      <a href="#ch1-3" class="nav-item"><span class="chapter-num">1.3</span>点的配方：坐标=混合比例</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">第二章 · 原点</div>
+      <a href="#ch2-start" class="nav-item"><span class="chapter-num">2.0</span>课程概览</a>
+      <a href="#ch2-1" class="nav-item"><span class="chapter-num">2.1</span>平移为什么塞不进 2×2</a>
+      <a href="#ch2-2" class="nav-item"><span class="chapter-num">2.2</span>第三支箭头与 4×4 布局</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">第三章 · 空间</div>
+      <a href="#ch3-start" class="nav-item"><span class="chapter-num">3.0</span>课程概览</a>
+      <a href="#ch3-1" class="nav-item"><span class="chapter-num">3.1</span>变换的两副面孔</a>
+      <a href="#ch3-2" class="nav-item"><span class="chapter-num">3.2</span>同一点的两套读数</a>
+      <a href="#ch3-3" class="nav-item"><span class="chapter-num">3.3</span>逆变换：沿来路回去</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">第四章 · 词典</div>
+      <a href="#ch4-start" class="nav-item"><span class="chapter-num">4.0</span>课程概览</a>
+      <a href="#ch4-1" class="nav-item"><span class="chapter-num">4.1</span>引擎里的六个空间</a>
+      <a href="#ch4-2" class="nav-item"><span class="chapter-num">4.2</span>实例空间：一套数据×N套帧</a>
+      <a href="#ch4-3" class="nav-item"><span class="chapter-num">4.3</span>空间关系图与任意互转</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">第五章 · 链条</div>
+      <a href="#ch5-start" class="nav-item"><span class="chapter-num">5.0</span>课程概览</a>
+      <a href="#ch5-1" class="nav-item"><span class="chapter-num">5.1</span>乘法顺序：右边的先干活</a>
+      <a href="#ch5-2" class="nav-item"><span class="chapter-num">5.2</span>全链路推演到屏幕像素</a>
+      <a href="#ch5-3" class="nav-item"><span class="chapter-num">5.3</span>嵌套层级与逆向走链</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">附录</div>
+      <a href="#ch6-start" class="nav-item"><span class="chapter-num">6</span>常见坑与引擎事实</a>
+      <a href="#appendix-a" class="nav-item"><span class="chapter-num">A</span>速查卡</a>
+    </div>
+  </nav>
+</aside>
+
+<!-- ============================================================
+     主内容
+     ============================================================ -->
+<div class="main-content">
+<div class="content-wrapper">
+
+<div class="hero">
+  <h1>一个点 <span class="highlight">+</span> 一支箭头</h1>
+  <div class="tagline">用最小的模型看懂旋转矩阵、空间转换与嵌套变换链 —— 每一步都有数值演示</div>
+  <div class="meta">
+    <span class="badge">6 个交互演示 · 4 个真 3D 可旋转</span>
+    <span class="badge">世界/本地/摄像机/实例/屏幕 互转</span>
+    <span class="badge">单文件 · 零依赖 · 离线可开</span>
+  </div>
+</div>
+
+<!-- ============================================================
+     前言
+     ============================================================ -->
+<section id="intro">
+  <h2 class="section-header"><span class="sec-no">00</span>前言 · 矩阵为什么难懂</h2>
+
+  <p>大多数教材讲矩阵旋转，一上来就是<strong>"把整个空间的网格抓住揉捏"</strong>——所有点同时变形、网格跟着弯折。这个模型在数学上是对的，但它要求你<strong>同时盯住无穷多个点</strong>，脑子里要渲染一整张会变形的网。对大多数人来说，这个认知负载太高了，于是矩阵就变成了"一坨会算出正确答案但不知道在干嘛的数字"。</p>
+
+  <p>这一页换一个极简模型，只盯住<strong>两样东西</strong>：</p>
+
+  <div class="key-point">
+    <div class="kp-icon">➡️</div>
+    <div class="kp-content">
+      <div class="kp-title">一支箭头</div>
+      <div class="kp-desc">一根从原点出发、初始指向 <b>x 正方向</b>、长度为 1 的箭头。它代表"x 轴转到了哪里"。旋转矩阵里所有的数字，都是这支箭头（和它垂直的伙伴）的<b>尖端坐标</b>。</div>
+    </div>
+  </div>
+  <div class="key-point">
+    <div class="kp-icon">🔴</div>
+    <div class="kp-content">
+      <div class="kp-title">一个点</div>
+      <div class="kp-desc">空间里任取一个点 P。它的坐标 <code>(x, y)</code> 不是"位置编号"，而是<b>混合两支箭头的配方比例</b>：x 份 x 箭头 + y 份 y 箭头，就调出这个点。矩阵变换点 = 换一套箭头，按原配方重新调。</div>
+    </div>
+  </div>
+
+  <p>先别急着理解上面每一句话——这一整页就是围绕这两句话展开的。读完第一章你会知道：</p>
+  <ul>
+    <li><strong>旋转矩阵的每个数字是从哪来的</strong>：不是背出来的，是箭头尖端的读数抄进表格；</li>
+    <li><strong>矩阵乘向量在算什么</strong>：按坐标比例混合新箭头，调出新位置；</li>
+    <li><strong>空间（本地/世界/摄像机/屏幕……）是什么</strong>：一个点（原点）加一组箭头（基）而已——和第一章的模型完全同构；</li>
+    <li><strong>空间转换在做什么</strong>：不是搬运物体，是"同一个事实，换一套读数"；</li>
+    <li><strong>嵌套链（本地→摄像机→世界……任意顺序）怎么算</strong>：一站一站换读数，矩阵从右往左依次生效。</li>
+  </ul>
+
+  <div class="callout callout-tip">
+    <strong>预备知识</strong>：只需要初中代数，外加三角函数里 <code>cos / sin</code> 的最朴素含义——在直角三角形里，<code>cosθ = 邻边/斜边</code>、<code>sinθ = 对边/斜边</code>。长度为 1 的箭头转 θ 角后，尖端水平读数就是 cosθ、竖直读数就是 sinθ。忘了也没关系，下一节现场复习。
+  </div>
+</section>
+
+<!-- ============================================================
+     第 1 章
+     ============================================================ -->
+<section id="ch1-start">
+  <div class="chapter-epigraph">矩阵不是一个数字表格。它是一份登记表：登记"原来的箭头，现在住在哪里"。</div>
+  <h2 class="section-header"><span class="sec-no">01</span>第一章 · 一支箭头讲清旋转矩阵</h2>
+  <p>本章只回答一个问题：<strong>旋转矩阵 <code>[[cosθ, −sinθ], [sinθ, cosθ]]</code> 里的四个数，凭什么长这样？</strong>答案只需要一支箭头。</p>
+</section>
+
+<section id="ch1-1">
+  <h3 class="sub-header">1.1 一支箭头：尖端落点就是答案</h3>
+
+  <p>拿一支长度恰好为 <strong>1</strong> 的箭头，尾巴钉在原点，箭尖指向 <strong>x 正方向</strong>。现在让它绕原点<strong>逆时针</strong>转 θ 角。问：箭头尖部落在哪里？</p>
+
+  <p>画一面墙（竖直线）和一块地板（水平线），从箭头尖端向它们做垂线，就得到一个直角三角形：斜边是箭头本身（长度 1），与水平方向的夹角是 θ。于是——</p>
+
+  <div class="formula-block">
+    <span class="formula-name">箭头尖端的读数（三角函数复习）</span>
+    水平读数 = 1 × cosθ　　竖直读数 = 1 × sinθ
+  </div>
+
+  <p>也就是说，<strong>这支箭头转到哪，它的尖端坐标就是 (cosθ, sinθ)</strong>。转 90°，尖端在 (0, 1)；转 180°，在 (−1, 0)。不需要任何矩阵知识，一支箭头加上 cos/sin 的定义，答案就出来了。</p>
+
+  <p>下面把这个过程做成演示。<strong>拖动角度滑块（或点"自动旋转"），盯着右侧矩阵表格的第一列</strong>——你会发现矩阵第一列的上下两个数，永远和画面里橙色箭头的尖端读数一字不差：</p>
+
+  <div class="demo-card">
+    <div class="demo-title">演示 1 · 箭头旋转器 —— 矩阵第一列 = 橙色箭头的尖端</div>
+    <div class="demo-description">
+      灰色网格固定不动。橙色箭头就是本节的"那支箭头"（初始沿 +x，长度 1）；勾选后出现的绿色箭头是它垂直的伙伴（初始沿 +y）。右侧 2×2 表格就是旋转矩阵——第一列涂成橙色、第二列涂成绿色。转动滑块，看着箭头尖端的读数被"抄写"进矩阵对应列。
+    </div>
+    <div class="demo-flex">
+      <div class="df-left">
+        <div class="canvas-box"><canvas id="m1-canvas" width="620" height="500"></canvas></div>
+      </div>
+      <div class="df-right">
+        <div class="mx-caption">旋转矩阵 R(θ)（颜色 = 来源箭头）</div>
+        <div class="mx-wrap">
+          <div class="mx-b l"></div>
+          <table class="mx" id="m1-mat">
+            <tr><td class="cx">1.000</td><td class="cy">0.000</td></tr>
+            <tr><td class="cx">0.000</td><td class="cy">1.000</td></tr>
+          </table>
+          <div class="mx-b r"></div>
+        </div>
+        <div class="num-panel" id="m1-readout"></div>
+      </div>
+    </div>
+    <div class="demo-controls">
+      <div class="slider-row">
+        <label>旋转角 θ</label>
+        <input type="range" id="m1-angle" min="-180" max="180" step="1" value="30">
+        <span class="slider-value" id="m1-angle-val">30°</span>
+        <button class="btn" id="m1-play">自动旋转</button>
+      </div>
+      <div class="slider-row">
+        <label>快捷角度</label>
+        <button class="btn" data-deg="0">0°</button>
+        <button class="btn" data-deg="30">30°</button>
+        <button class="btn" data-deg="45">45°</button>
+        <button class="btn" data-deg="60">60°</button>
+        <button class="btn" data-deg="90">90°</button>
+        <button class="btn" data-deg="180">180°</button>
+      </div>
+      <label class="inline-cb"><input type="checkbox" id="m1-showy" checked> 显示第二支箭头（+y 方向，绿色）</label>
+    </div>
+    <div class="demo-tip">两个要点：① θ=0 时矩阵是"什么都没发生"的单位矩阵；② 把 θ 拉到 90°，橙色箭头尖端精确落在 (0,1)——这就是为什么"转 90°"和"把 x 轴读到 y 轴上"是同一件事。</div>
+  </div>
+
+  <div class="key-point">
+    <div class="kp-icon">🎯</div>
+    <div class="kp-content">
+      <div class="kp-title">本节结论</div>
+      <div class="kp-desc">旋转矩阵的<strong>第一列，就是初始沿 +x 的那支单位箭头旋转后的尖端坐标</strong> (cosθ, sinθ)。矩阵不是发明出来的公式，是箭头尖端读数的登记表。</div>
+    </div>
+  </div>
+
+  <div class="quiz-box">
+    <div class="quiz-title">随堂小测 1</div>
+    <div class="quiz-q">把箭头逆时针转 60°，矩阵第一列的上下两个数分别是？</div>
+    <button class="quiz-opt">(sin60°, cos60°)</button>
+    <button class="quiz-opt" data-correct>(cos60°, sin60°)</button>
+    <button class="quiz-opt">(−sin60°, cos60°)</button>
+    <div class="quiz-explain">尖端水平读数 = cosθ、竖直读数 = sinθ，所以第一列从上到下是 (cos60°, sin60°) = (0.5, 0.866)。回到演示里把 θ 拖到 60° 验证一下。</div>
+  </div>
+</section>
+
+<section id="ch1-2">
+  <h3 class="sub-header">1.2 第二支箭头：凑齐矩阵两列</h3>
+
+  <p>只有一支箭头还定不了一个坐标系——就像只有"东"没有"北"，说不清东南偏北多少度。所以我们再钉一支<strong>和橙色箭头垂直、同长、初始沿 +y 方向</strong>的绿色箭头。关键规则只有一条：</p>
+
+  <div class="knowledge-box">
+    <div class="kb-title">旋转的守规矩条款</div>
+    <p>两支箭头像焊在一起的直角尺：<strong>转多少一起转，始终保持垂直、长度不变</strong>。橙色转 θ，绿色也转 θ。所以在演示 1 里你只拖一个滑块，两支箭头却同步旋转——它们是同一把尺子的两条边。</p>
+  </div>
+
+  <p>初始沿 +y 的绿色箭头转 θ 之后，尖端落在哪里？三角函数再算一次，答案是 <strong>(−sinθ, cosθ)</strong>。可以拿两个特殊角验证：θ=90° 时它转到 (−1, 0)（指向 −x，正确）；θ=180° 时转到 (0, −1)（指向 −y，正确）。</p>
+
+  <p>现在把两支箭头的"新住址"并排抄进表格——第一列抄橙色箭头，第二列抄绿色箭头：</p>
+
+  <div class="mx-wrap">
+    <div class="mx-b l"></div>
+    <table class="mx">
+      <tr><td class="cx">cosθ</td><td class="cy">−sinθ</td></tr>
+      <tr><td class="cx">sinθ</td><td class="cy">cosθ</td></tr>
+    </table>
+    <div class="mx-b r"></div>
+  </div>
+  <div class="mx-caption">这就是著名的旋转矩阵——现在它是"抄"出来的，不是"背"出来的</div>
+
+  <div class="callout callout-info">
+    <strong>读法总结</strong>：看到任何 2×2 矩阵，别急着算。先问：<b>第一列是哪支箭头的新家？第二列呢？</b>列里的数字是箭头尖端的读数。这个读法对剪切、缩放、镜像统统成立——比如"沿 x 拉伸 2 倍"就是把橙色箭头加长到 2（第一列变 (2, 0)），绿色箭头不动（第二列 (0, 1)）。旋转只是"两支箭头一起转圈"这种最常见的情况。
+  </div>
+
+  <p><strong>3D 完全同理</strong>：三维再钉一支垂直于前两支的 z 箭头，旋转矩阵 3×3 的每一列，还是对应箭头旋转后的尖端读数。下一章就把第三支箭头补齐，并升级成真 3D 演示。降维打击完毕——从现在起，"矩阵的列 = 箭头的新家"这条规则通吃到 4×4。</p>
+</section>
+
+<section id="ch1-3">
+  <h3 class="sub-header">1.3 点的配方：坐标 = 混合箭头的比例</h3>
+
+  <p>矩阵的列搞定了，还剩最后一个问题：<strong>拿矩阵去乘一个点，到底在算什么？</strong></p>
+
+  <p>回到"配方"的视角。点 P 的坐标 (x, y) 的真正含义是：</p>
+
+  <div class="formula-block">
+    <span class="formula-name">坐标的配方读法</span>
+    P = x × <span style="color:var(--accent-orange)">x̂</span> + y × <span style="color:var(--accent-green)">ŷ</span>　（x 份橙箭头，掺 y 份绿箭头）
+  </div>
+
+  <p>比如 P = (2, 1)：从原点出发，沿橙色箭头走 2 步，再沿绿色箭头走 1 步，落点就是 P。这就是"坐标"的全部秘密——<strong>它不是编号，是配方</strong>。</p>
+
+  <p>那么旋转一个点 = 什么？<strong>配方不动，换原料。</strong>两支箭头转走了，但 P 依然按老配方"x 份新橙箭头 + y 份新绿箭头"重新调出来。调出来的位置，就是矩阵乘向量的结果：</p>
+
+  <div class="formula-block">
+    <span class="formula-name">矩阵乘向量 = 按老配方混合新箭头</span>
+    M · P = x × <span style="color:var(--accent-orange)">M第1列</span> + y × <span style="color:var(--accent-green)">M第2列</span>
+  </div>
+
+  <p>展开成数字，就是你熟悉的旋转公式（对照着读：x′ 的第一项是 <span style="color:var(--accent-orange)">x·cosθ</span>，第二项是 <span style="color:var(--accent-green)">y·(−sinθ)</span>——每项都是"一份坐标 × 一支箭头的某个读数"）：</p>
+
+  <div class="formula-block">
+    <span class="formula-name">数值展开（第二章结束前你都不需要"记"它，看演示抄就行）</span>
+    x′ = x·cosθ − y·sinθ<br>
+    y′ = x·sinθ + y·cosθ
+  </div>
+
+  <div class="demo-card">
+    <div class="demo-title">演示 2 · 点的配方 —— 平行四边形调合法 + 数值逐步推演</div>
+    <div class="demo-description">
+      红色点 P 可以直接用鼠标拖动；θ 滑块旋转两支箭头（虚线 = 旋转前的旧箭头）。勾选"显示配方"后：先画 <b>x 份新橙箭头</b>（橙色虚线段），再从它末端接 <b>y 份新绿箭头</b>（绿色虚线段），两条虚线的"接力终点"就是 P′——矩阵乘法画出来的样子。右侧面板同步给出每一步的数值。
+    </div>
+    <div class="demo-flex">
+      <div class="df-left">
+        <div class="canvas-box"><canvas id="m2-canvas" width="620" height="500"></canvas></div>
+      </div>
+      <div class="df-right">
+        <div class="num-panel" id="m2-arith"></div>
+      </div>
+    </div>
+    <div class="demo-controls">
+      <div class="slider-row">
+        <label>旋转角 θ</label>
+        <input type="range" id="m2-angle" min="-180" max="180" step="1" value="45">
+        <span class="slider-value" id="m2-angle-val">45°</span>
+      </div>
+      <div class="slider-row">
+        <label>点 P</label>
+        <span class="slider-value" id="m2-p-val" style="min-width:110px">可直接拖动</span>
+        <button class="btn" id="m2-preset-a">P=(2,1)</button>
+        <button class="btn" id="m2-preset-b">P=(1,0)</button>
+        <button class="btn" id="m2-preset-c">P=(0,2)</button>
+      </div>
+      <label class="inline-cb"><input type="checkbox" id="m2-par" checked> 显示配方（平行四边形调合过程）</label>
+      <label class="inline-cb"><input type="checkbox" id="m2-step"> 分步播放配方（先 x 份，再 +y 份）</label>
+    </div>
+    <div class="demo-tip">把 P 拖到 (1, 0)：P′ 精确落在橙色箭头尖端上——"只有 x 成分"的点，变换后就是新 x 箭头本身。同理 P=(0,1) 会落在绿箭头尖上。这就是"列 = 箭头新家"的另一面。</div>
+  </div>
+
+  <div class="key-point">
+    <div class="kp-icon">🧩</div>
+    <div class="kp-content">
+      <div class="kp-title">第一章合体</div>
+      <div class="kp-desc"><strong>矩阵的列 = 箭头的新家；坐标 = 配方；矩阵乘向量 = 按老配方混合新箭头。</strong>旋转矩阵里没有一个数字需要背——全是箭头尖端的抄写。</div>
+    </div>
+  </div>
+
+  <div class="quiz-box">
+    <div class="quiz-title">随堂小测 2</div>
+    <div class="quiz-q">点 P = (0, 3)（纯 y 成分）被旋转矩阵变换后，P′ 会落在哪里？</div>
+    <button class="quiz-opt">在第一列箭头（橙）的延长线上，长度 3</button>
+    <button class="quiz-opt" data-correct>在第二列箭头（绿）的延长线上，长度 3</button>
+    <button class="quiz-opt">原地不动，因为 x=0</button>
+    <div class="quiz-explain">配方是 0 份橙 + 3 份绿 = 3 × 第二列。所以 P′ 落在新绿箭头的 3 倍长度处。到演示 2 里点按钮 P=(0,2) 看看（那里是 2 倍）。</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     第 2 章
+     ============================================================ -->
+<section id="ch2-start">
+  <div class="chapter-epigraph">箭头讲完了方向，还差一个没讲的东西：家在哪。</div>
+  <h2 class="section-header"><span class="sec-no">02</span>第二章 · 第三支箭头与原点：走进 3D</h2>
+  <p>旋转绕着原点转，原点永远不动。但游戏里的物体要<strong>搬家</strong>——只动箭头还不够，得连"点"（原点）一起动。本章把模型补全成完整的两件套：<strong>箭头管方向，点管位置</strong>，并补上第三支箭头，正式进入三维。</p>
+</section>
+
+<section id="ch2-1">
+  <h3 class="sub-header">2.1 平移为什么塞不进 2×2</h3>
+
+  <p>试一试用 2×2 矩阵把所有点向右移 1：你需要 <code>x′ = x + 1</code>。但 2×2 矩阵乘向量只能做"<strong>坐标 × 箭头读数的加权混合</strong>"——每个输出都是 x、y 的乘积组合，<strong>变不出"+1"这种凭空多出来的常数</strong>。用箭头语言说：2×2 只登记了两支箭头，可平移挪的是<strong>原点本身</strong>，箭头一寸没动——表格里根本没有原点的房间。</p>
+
+  <p>解决方法直白得可爱：<strong>给原点也发一个登记栏</strong>。给矩阵加一行一列，第三列专门登记"新原点搬到了哪"：</p>
+
+  <div class="mx-wrap">
+    <div class="mx-b l"></div>
+    <table class="mx">
+      <tr><td class="cx">cosθ</td><td class="cy">−sinθ</td><td class="ct">tx</td></tr>
+      <tr><td class="cx">sinθ</td><td class="cy">cosθ</td><td class="ct">ty</td></tr>
+      <tr><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">1</td></tr>
+    </table>
+    <div class="mx-b r"></div>
+  </div>
+  <div class="mx-caption">3×3 齐次矩阵：橙色列=x 箭头新家，绿色列=y 箭头新家，蓝色列=原点新家（最后一行 0,0,1 是固定脚手架）</div>
+
+  <div class="callout callout-analogy">
+    <strong>打个比方</strong>：2×2 矩阵像一份"<strong>指南针校准单</strong>"（只改东南西北指向哪里），3×3 齐次矩阵是一份"<strong>搬家通知单</strong>"：前两列写新指南针指向，第三列写新门牌地址。旋转缩放是"原地转向"，平移是"换门牌"，两件事写在同一张 3×3 单子上。
+  </div>
+</section>
+
+<section id="ch2-2">
+  <h3 class="sub-header">2.2 第三支箭头与 4×4 统一布局</h3>
+
+  <p>三维空间需要<strong>三支互相垂直的单位箭头</strong>：x̂、ŷ、ẑ。其中任何一支的"新家"，仍然抄进矩阵对应的一列。以"绕 z 轴转 θ"为例——x̂ 和 ŷ 像第一章那样转圈，<strong>ẑ 站在转轴上原地不动</strong>：</p>
+
+  <div class="mx-wrap">
+    <div class="mx-b l"></div>
+    <table class="mx">
+      <tr><td class="cx">cosθ</td><td class="cy">−sinθ</td><td class="cz">0</td></tr>
+      <tr><td class="cx">sinθ</td><td class="cy">cosθ</td><td class="cz">0</td></tr>
+      <tr><td class="cx">0</td><td class="cy">0</td><td class="cz">1</td></tr>
+    </table>
+    <div class="mx-b r"></div>
+  </div>
+  <div class="mx-caption">绕 z 旋转 Rz(θ)：第三列 = (0,0,1) —— z 箭头没动，它的新家就是老家</div>
+
+  <p>绕 x 转（Rx）就是换成 ŷ、ẑ 互相追赶着转圈、x̂ 站轴上不动；绕 y 同理。所以 3D 的任意旋转 = 三支箭头各自的新家，依然是"抄箭头尖端"，一条规则都没加。最后把原点栏也补上，得到游戏引擎里无处不在的 <strong>4×4 矩阵</strong>：</p>
+
+  <div class="knowledge-box">
+    <div class="kb-title">矩阵布局总纲（背这一句就够了）</div>
+    <p style="text-align:center;font-size:16px;"><b>矩阵 = [ 箭头₁ | 箭头₂ | 箭头₃ | 原点 ]</b></p>
+    <p>前三列（橙/绿/青）= 三支箭头的新家；第四列（蓝）= 原点的新家；最后一行 <code>0,0,0,1</code> 是固定脚手架。2D 的 3×3 是它的缩水版。</p>
+  </div>
+
+  <div class="demo-card">
+    <div class="demo-title">演示 3 · 3D 帧驾驶舱 —— 三支箭头 + 原点，各动矩阵的哪一块（可旋转视角）</div>
+    <div class="demo-description">
+      这是一个真 3D 场景：<b>拖空白处旋转视角，滚轮缩放</b>。彩色帧 = 原点（蓝圈）+ 三支箭头（x 橙 / y 绿 / z 青）；虚线是它的初始姿态。六个滑块分两组：旋转组（yaw 绕 z / pitch 绕 x / roll 绕 y，按此顺序连乘）与平移组（tx/ty/tz）。拖动它们，看右侧 4×4 的哪一列在跳数字。
+    </div>
+    <div class="demo-flex">
+      <div class="df-left">
+        <div class="canvas-box"><canvas id="m3-canvas" width="660" height="500"></canvas></div>
+      </div>
+      <div class="df-right">
+        <div class="mx-caption">这个帧的登记表（4×4）</div>
+        <div class="mx-wrap">
+          <div class="mx-b l"></div>
+          <table class="mx" id="m3-mat">
+            <tr><td class="cx">1</td><td class="cy">0</td><td class="cz">0</td><td class="ct">0</td></tr>
+            <tr><td class="cx">0</td><td class="cy">1</td><td class="cz">0</td><td class="ct">0</td></tr>
+            <tr><td class="cx">0</td><td class="cy">0</td><td class="cz">1</td><td class="ct">0</td></tr>
+            <tr><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">1</td></tr>
+          </table>
+          <div class="mx-b r"></div>
+        </div>
+        <div class="num-panel" id="m3-readout"></div>
+      </div>
+    </div>
+    <div class="demo-controls">
+      <div class="slider-row">
+        <label>Yaw 绕z</label>
+        <input type="range" id="m3-yaw" min="-180" max="180" step="1" value="35">
+        <span class="slider-value" id="m3-yaw-val">35°</span>
+        <label>Pitch 绕x</label>
+        <input type="range" id="m3-pitch" min="-180" max="180" step="1" value="0">
+        <span class="slider-value" id="m3-pitch-val">0°</span>
+      </div>
+      <div class="slider-row">
+        <label>Roll 绕y</label>
+        <input type="range" id="m3-roll" min="-180" max="180" step="1" value="0">
+        <span class="slider-value" id="m3-roll-val">0°</span>
+        <label>复位旋转</label>
+        <button class="btn" id="m3-r0">yaw/pitch/roll → 0</button>
+      </div>
+      <div class="slider-row">
+        <label>平移 tx</label>
+        <input type="range" id="m3-tx" min="-25" max="25" step="1" value="8">
+        <span class="slider-value" id="m3-tx-val">+1.60</span>
+        <label>平移 ty</label>
+        <input type="range" id="m3-ty" min="-25" max="25" step="1" value="4">
+        <span class="slider-value" id="m3-ty-val">+0.80</span>
+      </div>
+      <div class="slider-row">
+        <label>平移 tz</label>
+        <input type="range" id="m3-tz" min="-15" max="15" step="1" value="5">
+        <span class="slider-value" id="m3-tz-val">+1.00</span>
+      </div>
+    </div>
+    <div class="demo-tip">联动规律：三个旋转滑块只改前三列（三支箭头一起转向），三个平移滑块只改蓝色第四列（原点搬家）。"旋转改箭头列、平移改原点列"——这句话就是引擎里 LocalToWorld 矩阵的全部布局。</div>
+  </div>
+
+  <div class="callout callout-info">
+    <strong>坐标系约定</strong>：本页 3D 演示统一用<b>右手系、z 朝上</b>（x 前、y 左、z 上）。UE 是<b>左手系</b>（x 前、y 右、z 上）——两者只差 y 箭头的朝向，"点 + 箭头"模型完全一致，差异详见第 6 章。
+  </div>
+
+  <div class="callout callout-warning">
+    <strong>一个常见误解</strong>：别把"原点在最后一列"记成"最后一行"。本页全部采用<b>列向量约定</b>（矩阵左乘列向量，M·p）。有些 API（老式 DirectX 教材、某些引擎源码）用行向量 p·M，那时原点住在<b>最后一行</b>，整体书写互为转置——数学是同一套，详见第 6 章坑位表。
+  </div>
+</section>
+
+<!-- ============================================================
+     第 3 章
+     ============================================================ -->
+<section id="ch3-start">
+  <div class="chapter-epigraph">变换从来不是"把世界搬来搬去"，而是"同一个世界，换一把尺子重新读数"。</div>
+  <h2 class="section-header"><span class="sec-no">03</span>第三章 · 空间 = 一个点 + 一组箭头</h2>
+  <p>前两章攒齐了全部零件：原点（点）+ 基（三支箭头）。现在宣布一个定义：<strong>所谓"空间"（坐标系），就是一个点加一组箭头</strong>。所谓"空间变换"，就是拿着一套登记表，把同一件事实在两套登记表之间换算。</p>
+</section>
+
+<section id="ch3-1">
+  <h3 class="sub-header">3.1 变换的两副面孔：移动 vs 换读数</h3>
+
+  <p>这是全页最容易卡住、也最值得卡一下的地方。同一个矩阵，有两种完全等价的读法：</p>
+
+  <table>
+    <tr><th style="width:90px;">观点</th><th>矩阵在干什么</th><th>典型台词</th></tr>
+    <tr>
+      <td><strong>主动观点</strong></td>
+      <td>把点/物体在<strong>同一个坐标系里搬走</strong>：箭头转了，点按新配方调到新位置</td>
+      <td>"把这个角色旋转 30°" —— 角色真的动了</td>
+    </tr>
+    <tr>
+      <td><strong>被动观点</strong></td>
+      <td>坐标系换了，<strong>点原地不动</strong>，只是它的读数按新尺子重新报数</td>
+      <td>"转到角色本地空间看看" —— 世界没动，换读数</td>
+    </tr>
+  </table>
+
+  <p>两副面孔为什么是同一个矩阵？因为"新箭头相对旧箭头转 +θ"和"旧读数相对新箭头转 −θ 报数"是同一份登记表——<strong>尺子顺时针拧 θ，读数就逆时针多出 θ</strong>。图形学日常里：<strong>渲染顶点用主动观点</strong>（顶点真的被搬到屏幕各处），<strong>空间转换用被动观点</strong>（位置是客观事实，本地读数/世界读数/摄像机读数是几套描述）。</p>
+
+  <div class="callout callout-analogy">
+    <strong>打个比方</strong>：同一根电线杆，从村口牌坊量过去是 300 米，从学校门口量过去是 120 米。电线杆没动，<b>动的是量法的起点和方向</b>。"世界坐标 → 本地坐标"就是从"以村口为原点报数"换成"以学校门口为原点报数"。矩阵就是那张换算表。
+  </div>
+</section>
+
+<section id="ch3-2">
+  <h3 class="sub-header">3.2 同一点的两套读数（3D）</h3>
+
+  <p>下面这个演示是全页的心脏，现在是真 3D 的。<strong>红色点 P 是"客观事实"，灰色是世界登记表，彩色是本地登记表。</strong>从本地原点出发，沿着本地三支箭头依次走 x 步、y 步、z 步——这条三段"配方阶梯"的终点就是 P，阶梯的三段长度正好是 P 的本地读数：</p>
+
+  <div class="demo-card">
+    <div class="demo-title">演示 4 · 两套读数 —— 世界读数 vs 本地读数（3D 可旋转）</div>
+    <div class="demo-description">
+      <b>拖空白处旋转视角、滚轮缩放</b>。拖<b>本地原点（蓝圈）</b>在地面上移动；拖<b>红色点 P</b>在它当前高度的水平面上移动；用滑块调本地系的朝向与两者的高度。虚线阶梯 = P 的本地配方（橙 x 步 → 绿 y 步 → 青 z 步）。芯片实时给出两套读数；右侧是"本地→世界"登记表 M 和逆表 M⁻¹。
+    </div>
+    <div class="demo-flex">
+      <div class="df-left">
+        <div class="canvas-box"><canvas id="m4-canvas" width="680" height="520"></canvas></div>
+        <div class="chip-row" style="padding:8px 14px 12px;background:var(--bg-secondary)">
+          <span class="chip"><span class="dot" style="background:var(--accent-red)"></span>P 世界读数 <b id="m4-world">(?, ?, ?)</b></span>
+          <span class="chip"><span class="dot" style="background:var(--accent-orange)"></span>P 本地读数 <b id="m4-local">(?, ?, ?)</b></span>
+        </div>
+      </div>
+      <div class="df-right">
+        <div class="mx-caption">M（本地→世界）</div>
+        <div class="mx-wrap">
+          <div class="mx-b l"></div>
+          <table class="mx" id="m4-mat">
+            <tr><td class="cx">1</td><td class="cy">0</td><td class="cz">0</td><td class="ct">0</td></tr>
+            <tr><td class="cx">0</td><td class="cy">1</td><td class="cz">0</td><td class="ct">0</td></tr>
+            <tr><td class="cx">0</td><td class="cy">0</td><td class="cz">1</td><td class="ct">0</td></tr>
+            <tr><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">1</td></tr>
+          </table>
+          <div class="mx-b r"></div>
+        </div>
+        <div class="mx-caption">M⁻¹（世界→本地，逆表）</div>
+        <div class="mx-wrap">
+          <div class="mx-b l"></div>
+          <table class="mx dim" id="m4-mati">
+            <tr><td class="cx">1</td><td class="cy">0</td><td class="cz">0</td><td class="ct">0</td></tr>
+            <tr><td class="cx">0</td><td class="cy">1</td><td class="cz">0</td><td class="ct">0</td></tr>
+            <tr><td class="cx">0</td><td class="cy">0</td><td class="cz">1</td><td class="ct">0</td></tr>
+            <tr><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">1</td></tr>
+          </table>
+          <div class="mx-b r"></div>
+        </div>
+        <div class="num-panel" id="m4-verify"></div>
+      </div>
+    </div>
+    <div class="demo-controls">
+      <div class="slider-row">
+        <label>本地朝向 yaw</label>
+        <input type="range" id="m4-yaw" min="-180" max="180" step="1" value="40">
+        <span class="slider-value" id="m4-yaw-val">40°</span>
+        <label>本地原点高度</label>
+        <input type="range" id="m4-oz" min="-6" max="20" step="1" value="4">
+        <span class="slider-value" id="m4-oz-val">0.80</span>
+      </div>
+      <div class="slider-row">
+        <label>P 高度</label>
+        <input type="range" id="m4-pz" min="0" max="30" step="1" value="14">
+        <span class="slider-value" id="m4-pz-val">2.80</span>
+        <label class="inline-cb" style="margin-left:12px"><input type="checkbox" id="m4-active"> 显示"主动观点"影子（M·P世界）</label>
+      </div>
+    </div>
+    <div class="demo-tip">做两个实验：① 只动本地系（拖原点/转 yaw）——<b>世界读数纹丝不动，本地读数一直在变</b>（被动观点：事实没动，换的是尺子）；② 看虚线阶梯的三段长度：它们永远等于 P 的本地读数 x、y、z——"坐标=配方"在 3D 里的样子。</div>
+  </div>
+
+  <div class="key-point">
+    <div class="kp-icon">🌍</div>
+    <div class="kp-content">
+      <div class="kp-title">空间的正式定义（用前两章的语言）</div>
+      <div class="kp-desc"><strong>一个空间 = 一个原点（点）+ 三支互相垂直的单位箭头（基）。</strong>"P 在本地空间的读数"= P 沿本地箭头的配方；"P 在世界空间的读数"= 沿世界箭头的配方。两套配方描述同一个 P。</div>
+    </div>
+  </div>
+</section>
+
+<section id="ch3-3">
+  <h3 class="sub-header">3.3 逆变换：沿来路回去</h3>
+
+  <p>从本地读数换到世界读数用登记表 M；从世界换回本地，就用<strong>逆表 M⁻¹</strong>。直觉：正着走"旋转 θ 再平移"，反着走就得"先平移回去，再旋转回去"——<strong>顺序整个倒过来，每一步取逆</strong>（像脱衣服：穿的时候先袜子后鞋，脱的时候先鞋后袜子）。</p>
+
+  <div class="formula-block">
+    <span class="formula-name">逆 = 倒序逐个取逆</span>
+    (A·B)⁻¹ = B⁻¹ · A⁻¹
+  </div>
+
+  <p>旋转矩阵有一个几乎免费的福利：<strong>它的逆 = 转置</strong>（把行列互换）。用箭头语言三秒看懂：三支箭头单位长且互相垂直，说明登记表的前三列是"标准好箭头"；这样的表转置之后，行也自动是"标准好箭头"，而好箭头表 × 好箭头表(转置) = 单位矩阵。引擎里这一条省掉无数求逆计算：</p>
+
+  <div class="formula-block">
+    <span class="formula-name">正交矩阵（纯旋转）的逆</span>
+    R⁻¹ = Rᵀ　　（含平移时：R 部分转置，t 部分变为 −Rᵀt）
+  </div>
+
+  <div class="callout callout-info">
+    <strong>为什么演示 4 的逆表数字"长得像"原表</strong>：观察 M⁻¹ 的 3×3 部分，和 M 的 3×3 部分沿对角线互为镜像——那就是转置。只有原点列经过 −Rᵀt 的加工。这也解释了为什么法线变换常用"逆转置"：法线是"方向读数"，方向只用箭头部分描述（第 6 章还会再提一句）。
+  </div>
+</section>
+
+<!-- ============================================================
+     第 4 章
+     ============================================================ -->
+<section id="ch4-start">
+  <div class="chapter-epigraph">名字不同的空间，其实只是"原点和箭头钉在哪里"不同的几套登记表。</div>
+  <h2 class="section-header"><span class="sec-no">04</span>第四章 · 引擎空间词典：本地 / 世界 / 实例 / 摄像机 / 屏幕</h2>
+  <p>游戏引擎给几套常用的登记表起了名字。本章逐个认识它们，并给出"任意两个空间怎么互转"的通用方法。</p>
+</section>
+
+<section id="ch4-1">
+  <h3 class="sub-header">4.1 引擎里的六个空间</h3>
+
+  <ul class="term-list">
+    <li class="term-item"><strong>本地空间（Local / Object）</strong>建模时用的表：原点钉在物体自己身上（通常是轴心/骨架根），箭头沿物体朝向。美工做模型、动画师 K 帧，都在这张表里读数。它的好处是<strong>自带相对性</strong>：物体怎么跑怎么转，本地读数永远不变。</li>
+    <li class="term-item"><strong>父空间 / 层级（Parent / Hierarchy）</strong>有挂靠关系时中间会经过的表：角色的"手"挂在"手臂"上，手臂挂在"肩膀"上……每层一张表。第五章细讲嵌套。</li>
+    <li class="term-item"><strong>世界空间（World）</strong>整个场景公用的表：原点和箭头全局唯一、绝对静止（对场景而言）。逻辑层的大多数问题（"两物距离多远""谁在谁前面"）都在世界表里问，因为它对所有物体公平。</li>
+    <li class="term-item"><strong>实例空间（Instance）</strong>同一份本地数据被"复印"很多份时，每一份复印各自领一张表：实例化网格（ISMC/HISM）的每个实例、每个 Niagara 粒子、每株草地，都是"一套本地点+箭头"。数据只有一份，表有 N 张——这是实例化省内存的全部原理。</li>
+    <li class="term-item"><strong>摄像机/观察空间（Camera / View）</strong>原点钉在相机上、一支箭头沿视线方向的表。渲染前把所有东西的读数换到这张表里，"深度"就变成一个普通坐标，剔除和投影都变得好算。</li>
+    <li class="term-item"><strong>裁剪空间 → NDC → 屏幕空间（Clip / NDC / Screen）</strong>投影矩阵产出的表：三个坐标都压到 [-1,1]（NDC，Normalized Device Coordinates），最后一步"视口变换"把它摊成<strong>像素编号</strong>。屏幕空间里没有"米"，只有像素行列号——你屏幕上的每一个像素坐标，都是这张表的读数。</li>
+  </ul>
+
+  <div class="callout callout-tip">
+    <strong>一句话记住它们</strong>：本地=自己的表，父=上级的表，世界=全场公用的表，实例=复印件各自的表，摄像机=镜头前的表，屏幕=像素编号表。<b>每个名字回答的都只是同一个问题：原点和箭头钉在哪？</b>
+  </div>
+
+  <h4 class="minor-header">它们连成一条流水线</h4>
+
+  <div class="space-map">
+    <svg viewBox="0 0 760 150" width="760" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="var(--accent-blue)"></path>
+        </marker>
+        <marker id="arrb" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="var(--text-tertiary)"></path>
+        </marker>
+      </defs>
+      <style>
+        .smap-box { fill: var(--bg-card); stroke: var(--border-primary); rx: 8; }
+        .smap-txt { fill: var(--text-primary); font-size: 13px; font-weight: 600; text-anchor: middle; font-family: 'Noto Sans SC','Microsoft YaHei',sans-serif; }
+        .smap-sub { fill: var(--text-tertiary); font-size: 10px; text-anchor: middle; font-family: 'Noto Sans SC','Microsoft YaHei',sans-serif; }
+        .smap-edge { fill: var(--accent-blue); font-size: 11px; font-family: 'JetBrains Mono',Consolas,monospace; text-anchor: middle; }
+        .smap-line { stroke: var(--accent-blue); stroke-width: 1.5; fill: none; }
+        .smap-lineb { stroke: var(--text-tertiary); stroke-width: 1; stroke-dasharray: 3 3; fill: none; }
+      </style>
+      <rect class="smap-box" x="10" y="45" width="96" height="46" rx="8"/>
+      <text class="smap-txt" x="58" y="65">本地空间</text><text class="smap-sub" x="58" y="81">物体自己的表</text>
+      <rect class="smap-box" x="146" y="45" width="96" height="46" rx="8"/>
+      <text class="smap-txt" x="194" y="65">（父空间…）</text><text class="smap-sub" x="194" y="81">层级中间站</text>
+      <rect class="smap-box" x="282" y="45" width="96" height="46" rx="8"/>
+      <text class="smap-txt" x="330" y="65">世界空间</text><text class="smap-sub" x="330" y="81">全场公用表</text>
+      <rect class="smap-box" x="418" y="45" width="96" height="46" rx="8"/>
+      <text class="smap-txt" x="466" y="65">摄像机空间</text><text class="smap-sub" x="466" y="81">镜头前的表</text>
+      <rect class="smap-box" x="554" y="45" width="96" height="46" rx="8"/>
+      <text class="smap-txt" x="602" y="65">屏幕空间</text><text class="smap-sub" x="602" y="81">像素编号表</text>
+      <line class="smap-line" x1="106" y1="60" x2="144" y2="60" marker-end="url(#arr)"/>
+      <line class="smap-line" x1="242" y1="60" x2="280" y2="60" marker-end="url(#arr)"/>
+      <line class="smap-line" x1="378" y1="60" x2="416" y2="60" marker-end="url(#arr)"/>
+      <line class="smap-line" x1="514" y1="60" x2="552" y2="60" marker-end="url(#arr)"/>
+      <text class="smap-edge" x="125" y="52">M子</text>
+      <text class="smap-edge" x="261" y="52">M父</text>
+      <text class="smap-edge" x="397" y="52">V</text>
+      <text class="smap-edge" x="533" y="52">Proj</text>
+      <path class="smap-lineb" d="M 466 91 C 466 125, 330 125, 330 93" marker-end="url(#arrb)"/>
+      <text x="398" y="129" style="fill:var(--text-tertiary);font-size:10.5px;text-anchor:middle;font-family:'JetBrains Mono',Consolas,monospace;">V⁻¹（世界→摄像机 的逆路）</text>
+    </svg>
+  </div>
+
+  <div class="callout callout-info">
+    <strong>实例空间插一句</strong>：实例空间在流水线图里不在主链上——它其实是"若干张本地表"的别名。实例 i 的世界读数 = M(实例i) × 本地读数，一步到位。下一节专门玩它。
+  </div>
+</section>
+
+<section id="ch4-2">
+  <h3 class="sub-header">4.2 实例空间：一套本地数据 × N 套帧（3D）</h3>
+
+  <p>"实例化"听起来高级，拆开就是：<strong>本地图形只存一份（省内存），但每个实例领一套"点+箭头"（各转各的）</strong>。画第 i 个实例 = 把本地顶点读数挨个喂给 Mᵢ 登记表。来看演示（真 3D，可旋转）：</p>
+
+  <div class="demo-card">
+    <div class="demo-title">演示 5 · 3D 实例阵列 —— 同一架三角翼，N 套登记表</div>
+    <div class="demo-description">
+      所有灰色三角翼共用<b>同一份本地顶点数据</b>（完全相同的 4 个顶点）。它们姿态各异，只因为每个实例领了不同的"点+箭头"：环绕角决定原点，切向+自转决定朝向，起伏波决定高度。点击任意一架（就近选取）：高亮它的帧和登记表。拖空白处旋转视角。
+    </div>
+    <div class="demo-flex">
+      <div class="df-left">
+        <div class="canvas-box"><canvas id="m5-canvas" width="720" height="480"></canvas></div>
+      </div>
+      <div class="df-right">
+        <div class="mx-caption" id="m5-which">选中实例的登记表 Mᵢ</div>
+        <div class="mx-wrap">
+          <div class="mx-b l"></div>
+          <table class="mx" id="m5-mat">
+            <tr><td class="cx">1</td><td class="cy">0</td><td class="cz">0</td><td class="ct">0</td></tr>
+            <tr><td class="cx">0</td><td class="cy">1</td><td class="cz">0</td><td class="ct">0</td></tr>
+            <tr><td class="cx">0</td><td class="cy">0</td><td class="cz">1</td><td class="ct">0</td></tr>
+            <tr><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">1</td></tr>
+          </table>
+          <div class="mx-b r"></div>
+        </div>
+        <div class="num-panel" id="m5-info">点击画布中的任意一架…</div>
+      </div>
+    </div>
+    <div class="demo-controls">
+      <div class="slider-row">
+        <label>实例数 N</label>
+        <input type="range" id="m5-count" min="3" max="14" step="1" value="9">
+        <span class="slider-value" id="m5-count-val">9</span>
+        <label>环绕半径</label>
+        <input type="range" id="m5-radius" min="0" max="30" step="1" value="16">
+        <span class="slider-value" id="m5-radius-val">3.20</span>
+      </div>
+      <div class="slider-row">
+        <label>统一自转</label>
+        <input type="range" id="m5-spin" min="-180" max="180" step="1" value="0">
+        <span class="slider-value" id="m5-spin-val">0°</span>
+        <label>高度起伏</label>
+        <input type="range" id="m5-wave" min="0" max="30" step="1" value="10">
+        <span class="slider-value" id="m5-wave-val">2.00</span>
+      </div>
+    </div>
+    <div class="demo-tip">选中一架后注意它的 Mᵢ：前三列 = 三支箭头的朝向，第四列 = 原点位置（含高度）。把"统一自转"拉满——所有三角翼齐刷刷转向，但<b>每架的本地数据（那 4 个顶点）从未变过</b>。Niagara 的 GPU 粒子、草地渲染、人群 Crowd，都是这张图的放大版。</div>
+  </div>
+
+  <div class="knowledge-box">
+    <div class="kb-title">在 UE 里你在哪见过这些名字</div>
+    <ul>
+      <li><strong>ISMC / HISM（InstancedStaticMesh）</strong>：AddInstance 传的 Transform，就是给新复印件发一张"点+箭头"表；</li>
+      <li><strong>Niagara 发射器的 Local Space 开关</strong>：开 = 粒子们的表挂在发射器表下面（发射器动，粒子跟着动）；关 = 直接挂世界表；</li>
+      <li><strong>材质里的 Transform 节点</strong>：下拉里的 Tangent / Local / World / View / Camera / Screen / Particle，就是在选"从哪张表换到哪张表"（不同版本选项略有出入）；</li>
+      <li><strong>GetActorLocation 返回世界读数；RelativeLocation 是父空间读数</strong>——同一个位置，两张表的报数。</li>
+    </ul>
+    <p style="font-size:12px;color:var(--text-tertiary);">以上为高置信常识级事实；具体选项名与行为以你手头引擎版本的官方文档为准。</p>
+  </div>
+</section>
+
+<section id="ch4-3">
+  <h3 class="sub-header">4.3 空间关系图与"任意两空间互转"</h3>
+
+  <p>把 4.1 的流水线图当成一张<strong>地铁线路图</strong>：每个空间是一个站，每条边是一张登记表。要从任意一站到另一站，方法唯一：</p>
+
+  <div class="key-point">
+    <div class="kp-icon">🚇</div>
+    <div class="kp-content">
+      <div class="kp-title">任意两空间互转 = 沿图找一条路，把路上的表按"离起点近的在右"的顺序连乘</div>
+      <div class="kp-desc">例：本地 → 摄像机 = V · M（先坐 M 从本地到世界，再坐 V 从世界到摄像机）。反着走就把每张表换成逆表、顺序倒过来：摄像机 → 本地 = M⁻¹ · V⁻¹。没有直达线路就多换几站，本质全是同一件事：一站一站换读数。</div>
+    </div>
+  </div>
+
+  <div class="formula-block">
+    <span class="formula-name">常用线路（列向量约定）</span>
+    本地→世界：p_world = M · p_local<br>
+    世界→本地：p_local = M⁻¹ · p_world<br>
+    本地→摄像机：p_view = V · M · p_local　（路过世界，换乘）<br>
+    摄像机→本地：p_local = M⁻¹ · V⁻¹ · p_view　（原路返回）
+  </div>
+
+  <div class="quiz-box">
+    <div class="quiz-title">随堂小测 3</div>
+    <div class="quiz-q">把本地系整体旋转 10°（物体本身没动），P 的"世界读数"会变吗？</div>
+    <button class="quiz-opt">会，因为矩阵变了</button>
+    <button class="quiz-opt" data-correct>不会，变的只是本地读数</button>
+    <button class="quiz-opt">两个都会变</button>
+    <div class="quiz-explain">被动观点：P 是客观事实，世界表没动，世界读数当然不变；变的是 P 相对新本地箭头的配方——本地读数变了。回演示 4 里转 yaw 滑块亲眼确认。</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     第 5 章
+     ============================================================ -->
+<section id="ch5-start">
+  <div class="chapter-epigraph">再长的链，也是一站一站换读数换过去的——每站只做一件小事。</div>
+  <h2 class="section-header"><span class="sec-no">05</span>第五章 · 链式与嵌套：从子物体本地到屏幕像素（真 3D）</h2>
+  <p>最后一块拼图：当空间一层套一层（子物体在父物体里、父在世界里、世界在镜头里），读数怎么一站一站传下去？乘法顺序为什么不能乱？本章的演示用<strong>真实透视投影</strong>一路算到像素。</p>
+</section>
+
+<section id="ch5-1">
+  <h3 class="sub-header">5.1 乘法顺序：右边的先干活</h3>
+
+  <p>矩阵乘向量是从右往左生效的——因为<strong>右边的矩阵离点最近</strong>：</p>
+
+  <div class="formula-block">
+    <span class="formula-name">渲染总公式（列向量约定）</span>
+    p_screen = P<sub>roj</sub> · V · M · p_local
+  </div>
+
+  <p>读法：p_local 先被 M（本地→世界）换算，再被 V（世界→摄像机）换算，最后被 P（投影到屏幕）。就像流水线工位：原料从最右边的工位进，从最左边的工位出。</p>
+
+  <div class="callout callout-analogy">
+    <strong>穿衣服定理</strong>：早上先穿袜子再穿鞋，写成式子是 <code>鞋·袜·脚</code>（右边的先套上）。晚上脱的顺序必然是 <code>袜⁻¹·鞋⁻¹</code>——<b>整体倒序、每件取逆</b>。矩阵链同理：正向 M·…，逆向就倒着剥。
+  </div>
+
+  <p><strong>顺序为什么不能乱</strong>？因为"先转再挪"和"先挪再转"结果不同：转完再挪，挪的是世界方向；先挪再转，那段平移会被旋转带着走，落点完全两回事。旋转+平移不满足交换律——只有"纯旋转乘纯旋转（同轴）"等少数组合才与顺序无关。下一节的演示里专门放了<strong>顺序对照实验</strong>。</p>
+</section>
+
+<section id="ch5-2">
+  <h3 class="sub-header">5.2 全链路推演：子本地 → 父本地 → 世界 → 摄像机 → NDC → 屏幕像素</h3>
+
+  <p>压轴演示，真 3D。画面里四套帧：<strong>世界（地面网格）、父（橙）、子（绿）、摄像机（蓝，含视锥线架）</strong>，红色点 P 钉在子本地空间里。右侧是六站流水线——每站显示当前空间的读数和换乘用的登记表，<strong>第四站之后是货真价实的透视投影</strong>：4×4 投影矩阵 → 除以 w → NDC → 视口像素：</p>
+
+  <div class="demo-card">
+    <div class="demo-title">演示 6 · 3D 全链路推演器 —— 六站读数 + 每站矩阵，真实透视除法算到像素</div>
+    <div class="demo-description">
+      <b>拖空白处旋转视角、滚轮缩放</b>。画布手柄：<b>各帧原点（空心圈，在各自高度平面拖动）、红色点 P（在其高度平面拖动）</b>；朝向用滑块（父/子 yaw，相机 yaw+pitch）。蓝色视锥 = 相机视野；右下角"屏幕视口"里的小十字 = P 投影后的像素位置。步进按钮走流水线，当前站的帧会高亮。
+    </div>
+    <div class="canvas-box" style="padding-bottom:8px"><canvas id="m6-canvas" width="920" height="560"></canvas></div>
+    <div class="demo-controls">
+      <div class="slider-row">
+        <label>▶ 流水线</label>
+        <button class="btn" id="m6-prev">◂ 上一站</button>
+        <button class="btn" id="m6-next">下一站 ▸</button>
+        <button class="btn" id="m6-play">自动播放</button>
+        <button class="btn" id="m6-reset">重置场景</button>
+        <span class="slider-value" id="m6-stage-name" style="min-width:150px">第 0 站 · 子本地</span>
+      </div>
+      <div class="slider-row">
+        <label>父 yaw</label>
+        <input type="range" id="m6-thp" min="-180" max="180" step="1" value="20">
+        <span class="slider-value" id="m6-thp-val">20°</span>
+        <label>子 yaw</label>
+        <input type="range" id="m6-thc" min="-180" max="180" step="1" value="-35">
+        <span class="slider-value" id="m6-thc-val">-35°</span>
+        <label>相机 yaw</label>
+        <input type="range" id="m6-thv" min="-180" max="180" step="1" value="-42">
+        <span class="slider-value" id="m6-thv-val">-42°</span>
+      </div>
+      <div class="slider-row">
+        <label>相机 pitch</label>
+        <input type="range" id="m6-pv" min="-60" max="60" step="1" value="-16">
+        <span class="slider-value" id="m6-pv-val">-16°</span>
+        <label>P 高度</label>
+        <input type="range" id="m6-pz" min="0" max="30" step="1" value="9">
+        <span class="slider-value" id="m6-pz-val">1.80</span>
+      </div>
+    </div>
+    <div style="padding:12px 16px;background:var(--bg-secondary)">
+      <div class="stage-list" id="m6-stage-list"></div>
+      <div class="num-panel" id="m6-order" style="display:none"></div>
+    </div>
+    <div class="demo-controls" style="border-top:1px solid var(--border-primary)">
+      <div class="slider-row">
+        <label>顺序实验</label>
+        <button class="btn" id="m6-swap">对比：V·M 与 M·V 谁先谁后</button>
+      </div>
+    </div>
+    <div class="demo-tip">注意每一站的"点"都没有动——动的只是读数与高亮的帧。第 3 站读数里 z 变成"向后为正"（视线 = −z，OpenGL 惯例）；第 4 站做透视除法（除以 w=−z，近大远小就藏在这一步）；第 5 站是视口里的像素坐标。这就是 GPU 顶点着色器里一行 <code>mul(MVP, position)</code> 背后的完整故事。</div>
+  </div>
+
+  <div class="knowledge-box">
+    <div class="kb-title">透视除法：全流水线唯一一次"除法"</div>
+    <p>投影矩阵把相机系读数变成"裁剪坐标"——xyz 各乘了不同系数，并顺手产出第四个分量 <code>w = −z</code>（离相机越远，w 越大）。下一步把 xyz 全部<b>除以 w</b>，得到 NDC：近处的点 w 小、除完数值大（被推离中心 → 显得大），远处的点 w 大、除完被拉向中心（显得小）。<b>"近大远小"这四个字，物理上就是一次除法。</b>最后视口变换把 [−1,1] 摊成像素行列号（y 翻转，因为像素行号向下数）。把 P 拖到视锥外面，第 5 站会显示"不在屏幕内"——裁剪就发生在这一步之前。</p>
+  </div>
+</section>
+
+<section id="ch5-3">
+  <h3 class="sub-header">5.3 嵌套层级与逆向走链</h3>
+
+  <p>嵌套（骨骼、Actor 挂 Actor、UI 套 UI）没有新数学，只有一条<strong>站位规则</strong>：</p>
+
+  <div class="key-point">
+    <div class="kp-icon">🪆</div>
+    <div class="kp-content">
+      <div class="kp-title">离点最近的表，写在最右边</div>
+      <div class="kp-desc">p_world = M(父) · M(子) · M(孙) · p_孙本地。链条从点身边开始向外生长，一层层向外换乘。反求本地读数则整体倒序取逆：p_孙本地 = M(孙)⁻¹ · M(子)⁻¹ · M(父)⁻¹ · p_world。</div>
+    </div>
+  </div>
+
+  <p>为什么要嵌套而不是直接给每个物体发一张"本地→世界"表？因为<strong>局部性</strong>：手臂一抬，手、手指、指甲上全部顶点的"相对手臂"读数一个都不用改，只有手臂那张表变了——链条自动把影响传下去。要是每个物体都直存世界表，抬一次手臂要重算所有子孙的表。动画骨骼、挂件系统、层级 UI，全是这条局部性的红利。</p>
+
+  <div class="quiz-box">
+    <div class="quiz-title">随堂小测 4</div>
+    <div class="quiz-q"><code>p_screen = P·V·M·p_local</code> 中，第一个生效的矩阵是？</div>
+    <button class="quiz-opt">P（投影，写在最左边）</button>
+    <button class="quiz-opt" data-correct>M（模型矩阵，离点最近）</button>
+    <button class="quiz-opt">同时生效，不分先后</button>
+    <div class="quiz-explain">矩阵链从右往左作用：最右边的 M 离 p_local 最近，先把它从本地读数换成世界读数；P 写在最左，最后才生效。"右边的先干活。"</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     第 6 章
+     ============================================================ -->
+<section id="ch6-start">
+  <h2 class="section-header"><span class="sec-no">06</span>第六章 · 常见坑与引擎事实</h2>
+
+  <table>
+    <tr><th style="width:150px;">坑 / 事实</th><th>一句话拆解</th></tr>
+    <tr><td><strong>乘法顺序反了</strong></td><td>右边的先作用。调试时把链拆开逐站代入，看读数在哪一站开始不对——比盯最终错误结果高效得多。</td></tr>
+    <tr><td><strong>行向量 vs 列向量</strong></td><td>数学/GLSL 常用 <code>M·p</code>（列向量，原点在最后一<b>列</b>）；老式 DirectX 教材用 <code>p·M</code>（行向量，原点在最后一<b>行</b>）。同一变换两种书写互为转置。读引擎源码先看它用哪种约定。</td></tr>
+    <tr><td><strong>左手系 / 右手系</strong></td><td>同样的"绕 z 转 +90°"，左右手系转出的方向相反（判据：用哪只手的四指从 x 卷向 y，拇指即 z）。跨引擎/跨 API 移植时先确认手性，再谈数值。本页 3D 演示 = 右手系（x 前、y 左、z 上）；UE = 左手系（x 前、y 右、z 上）——只差 y 箭头朝向。</td></tr>
+    <tr><td><strong>NDC 的 z 范围</strong></td><td>OpenGL 惯例 z∈[−1,1]，Direct3D 惯例 z∈[0,1]，Vulkan 还要翻转 y。写跨 API shader 时深度范围不能想当然。</td></tr>
+    <tr><td><strong>引擎存四元数不存矩阵</strong></td><td>UE 的 FTransform = 四元数(旋转) + 平移 + 缩放：省内存（4 个数 vs 9/16 个）、可球面插值、无万向节锁。要用的时候才组装成矩阵——组装顺序：先缩放、再旋转、后平移（即 T·R·S）。</td></tr>
+    <tr><td><strong>法线要用"逆转置"</strong></td><td>法线是方向读数（只用箭头部分）。物体带非均匀缩放时，直接用同一个 M 变法线会把垂直关系拉歪，要用 (M⁻¹)ᵀ 的 3×3 部分——这是 3.3 节"逆=转置"在工程里最常见的露面。</td></tr>
+  </table>
+
+  <div class="callout callout-important">
+    <strong>本页全部数值都可复算</strong>：六个演示的每个读数（包括 3D 投影与像素坐标）都是现场计算的真实数值（非预设动画）。如果你在任何一本教材/引擎文档里看到的数字与本页演示不一致——先怀疑约定（行/列向量、手性、角度方向），再怀疑公式。
+  </div>
+</section>
+
+<!-- ============================================================
+     附录
+     ============================================================ -->
+<section id="appendix-a">
+  <h2 class="section-header"><span class="sec-no">A</span>附录 · 一页速查卡</h2>
+
+  <h4 class="minor-header">模型</h4>
+  <ul>
+    <li><strong>箭头</strong>：单位长、互垂直；矩阵的列 = 箭头旋转后的尖端读数</li>
+    <li><strong>点（原点）</strong>：矩阵的最后一列；平移只改它</li>
+    <li><strong>坐标 = 配方</strong>：P = x·x̂ + y·ŷ (+ z·ẑ)；矩阵乘向量 = 按老配方混合新箭头</li>
+    <li><strong>空间 = 点 + 三支箭头</strong>；空间变换 = 换表重报读数（被动观点）</li>
+  </ul>
+
+  <h4 class="minor-header">公式</h4>
+  <div class="formula-block">
+    <span class="formula-name">全部公式一屏</span>
+    R(θ) 的列 = 各支箭头旋转后的尖端读数<br>
+    M·P = x·列₁ + y·列₂ (+ z·列₃)<br>
+    齐次布局 = [ 箭头 | 箭头 | (箭头 | 箭头) | 原点 ]（3D 为 4×4）<br>
+    (A·B)⁻¹ = B⁻¹·A⁻¹　　R⁻¹ = Rᵀ（纯旋转）<br>
+    p_world = M父·M子·p_子本地　（离点最近的在右）<br>
+    p_clip = P·V·M·p_local → /w → NDC → 像素
+  </div>
+
+  <h4 class="minor-header">空间词典</h4>
+  <ul>
+    <li><strong>本地</strong>：原点钉在物体上 → 自带相对性；<strong>父</strong>：挂靠关系的中间站</li>
+    <li><strong>世界</strong>：全场公用，逻辑层问题在这问；<strong>实例</strong>：同一份数据的 N 张复印件表</li>
+    <li><strong>摄像机</strong>：原点钉在镜头上，深度变普通坐标；<strong>屏幕</strong>：只剩像素编号</li>
+  </ul>
+</section>
+
+<div class="site-footer">
+  <div>矩阵与空间变换 · 用一个点和一支箭头看懂</div>
+  <div>单文件 · 零依赖 · 所有数值现场计算（含真实透视投影） —— 姊妹篇：《线性代数完全学习指南》《实时渲染完全学习指南》</div>
+</div>
+
+</div><!-- /content-wrapper -->
+</div><!-- /main-content -->
+<script>
+// ============================================================
+// 基础设施：主题 / 侧栏 / 进度 / 搜索 / 测验
+// ============================================================
+var REDRAWS = [];
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+var PAL = {};
+function refreshPalette() {
+  var light = document.documentElement.getAttribute('data-theme') === 'light';
+  PAL.x = cssVar('--accent-orange');
+  PAL.y = cssVar('--accent-green');
+  PAL.z = cssVar('--accent-cyan');
+  PAL.t = cssVar('--accent-purple');
+  PAL.p = cssVar('--accent-red');
+  PAL.bg = cssVar('--canvas-bg');
+  PAL.text = cssVar('--text-primary');
+  PAL.dim = cssVar('--text-tertiary');
+  PAL.grid = light ? 'rgba(0,0,0,0.09)' : 'rgba(255,255,255,0.07)';
+  PAL.axis = light ? 'rgba(0,0,0,0.28)' : 'rgba(255,255,255,0.25)';
+  PAL.ghost = light ? 'rgba(0,0,0,0.22)' : 'rgba(255,255,255,0.20)';
+  PAL.fillGhost = light ? 'rgba(88,96,105,0.22)' : 'rgba(144,144,168,0.28)';
+}
+function toggleTheme() {
+  var el = document.documentElement;
+  var light = el.getAttribute('data-theme') === 'light';
+  if (light) { el.removeAttribute('data-theme'); localStorage.setItem('mst-theme', 'dark'); }
+  else { el.setAttribute('data-theme', 'light'); localStorage.setItem('mst-theme', 'light'); }
+  refreshPalette();
+  REDRAWS.forEach(function(f) { f(); });
+}
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('show');
+}
+window.addEventListener('scroll', function() {
+  var h = document.documentElement;
+  var p = h.scrollTop / (h.scrollHeight - h.clientHeight);
+  document.getElementById('readingProgress').style.width = (p * 100) + '%';
+}, { passive: true });
+function filterSidebar() {
+  var q = document.getElementById('sidebarSearch').value.trim().toLowerCase();
+  document.querySelectorAll('.nav-item').forEach(function(a) {
+    a.style.display = !q || a.textContent.toLowerCase().indexOf(q) >= 0 ? '' : 'none';
+  });
+}
+(function() {
+  if (!('IntersectionObserver' in window)) return;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { e.target._paused = !e.isIntersecting; });
+  }, { rootMargin: '60px' });
+  document.querySelectorAll('canvas').forEach(function(c) { c._paused = false; obs.observe(c); });
+})();
+(function() {
+  var links = document.querySelectorAll('.nav-item');
+  var map = {};
+  links.forEach(function(a) { map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      if (e.isIntersecting) {
+        links.forEach(function(a) { a.classList.remove('active'); });
+        var a = map[e.target.id];
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-25% 0px -65% 0px' });
+  document.querySelectorAll('section[id]').forEach(function(s) { obs.observe(s); });
+})();
+document.querySelectorAll('.quiz-box').forEach(function(box) {
+  box.querySelectorAll('.quiz-opt').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      if (box.classList.contains('answered')) return;
+      var right = btn.hasAttribute('data-correct');
+      btn.classList.add(right ? 'right' : 'wrong');
+      if (!right) {
+        var c = box.querySelector('.quiz-opt[data-correct]');
+        if (c) c.classList.add('right');
+      }
+      box.classList.add('answered');
+    });
+  });
+});
+
+// ============================================================
+// 2D 数学（演示 1~2 用，row-major 3×3）
+// ============================================================
+function frameToMat(deg, tx, ty) {
+  var r = deg * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+  return [c, -s, tx, s, c, ty, 0, 0, 1];
+}
+function mul(A, B) {
+  var C = new Array(9);
+  for (var r = 0; r < 3; r++) for (var c = 0; c < 3; c++) {
+    var v = 0;
+    for (var k = 0; k < 3; k++) v += A[r * 3 + k] * B[k * 3 + c];
+    C[r * 3 + c] = v;
+  }
+  return C;
+}
+function ap(M, x, y) {
+  return [M[0] * x + M[1] * y + M[2], M[3] * x + M[4] * y + M[5]];
+}
+function f3(n) { return (Math.abs(n) < 1e-4 ? 0 : n).toFixed(3); }
+function f2(n) { return (Math.abs(n) < 1e-4 ? 0 : n).toFixed(2); }
+function setMatCells(tableId, values) {
+  var t = document.getElementById(tableId);
+  if (!t) return;
+  var tds = t.querySelectorAll('td');
+  for (var i = 0; i < tds.length && i < values.length; i++) tds[i].textContent = values[i];
+}
+function matMini(M) {
+  return f2(M[0]) + ' ' + f2(M[1]) + ' ' + f2(M[2]) + '\n' +
+         f2(M[3]) + ' ' + f2(M[4]) + ' ' + f2(M[5]) + '\n' +
+         '  0    0    1';
+}
+
+// ============================================================
+// 3D 数学（row-major 4×4，列向量约定 M·p）
+// ============================================================
+function m4I() { return [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]; }
+function m4mul(A, B) {
+  var C = new Array(16);
+  for (var r = 0; r < 4; r++) for (var c = 0; c < 4; c++) {
+    var v = 0;
+    for (var k = 0; k < 4; k++) v += A[r * 4 + k] * B[k * 4 + c];
+    C[r * 4 + c] = v;
+  }
+  return C;
+}
+function m4rotX(deg) { var r = deg * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); return [1,0,0,0, 0,c,-s,0, 0,s,c,0, 0,0,0,1]; }
+function m4rotY(deg) { var r = deg * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); return [c,0,s,0, 0,1,0,0, -s,0,c,0, 0,0,0,1]; }
+function m4rotZ(deg) { var r = deg * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); return [c,-s,0,0, s,c,0,0, 0,0,1,0, 0,0,0,1]; }
+function m4trans(x, y, z) { var M = m4I(); M[3] = x; M[7] = y; M[11] = z; return M; }
+function m4frame(yaw, pitch, roll, x, y, z) {
+  var M = m4mul(m4rotZ(yaw), m4mul(m4rotX(pitch), m4rotY(roll)));
+  var T = m4I(); T[3] = x; T[7] = y; T[11] = z;
+  return m4mul(T, M);
+}
+function m4ap(M, p) { // 仿射（w 恒为 1）
+  return [
+    M[0] * p[0] + M[1] * p[1] + M[2] * p[2] + M[3],
+    M[4] * p[0] + M[5] * p[1] + M[6] * p[2] + M[7],
+    M[8] * p[0] + M[9] * p[1] + M[10] * p[2] + M[11]
+  ];
+}
+function m4ap4(M, p) { // 完整齐次
+  return [
+    M[0] * p[0] + M[1] * p[1] + M[2] * p[2] + M[3] * p[3],
+    M[4] * p[0] + M[5] * p[1] + M[6] * p[2] + M[7] * p[3],
+    M[8] * p[0] + M[9] * p[1] + M[10] * p[2] + M[11] * p[3],
+    M[12] * p[0] + M[13] * p[1] + M[14] * p[2] + M[15] * p[3]
+  ];
+}
+function m4inv(src) { // 高斯消元求逆（带部分主元）
+  var a = src.slice(), inv = m4I(), c, r, t;
+  for (var col = 0; col < 4; col++) {
+    var piv = col, mx = Math.abs(a[col * 4 + col]);
+    for (r = col + 1; r < 4; r++) { var v = Math.abs(a[r * 4 + col]); if (v > mx) { mx = v; piv = r; } }
+    if (mx < 1e-10) return null;
+    if (piv !== col) {
+      for (c = 0; c < 4; c++) {
+        t = a[col * 4 + c]; a[col * 4 + c] = a[piv * 4 + c]; a[piv * 4 + c] = t;
+        t = inv[col * 4 + c]; inv[col * 4 + c] = inv[piv * 4 + c]; inv[piv * 4 + c] = t;
+      }
+    }
+    var d = a[col * 4 + col];
+    for (c = 0; c < 4; c++) { a[col * 4 + c] /= d; inv[col * 4 + c] /= d; }
+    for (r = 0; r < 4; r++) if (r !== col) {
+      var f = a[r * 4 + col];
+      if (f) for (c = 0; c < 4; c++) { a[r * 4 + c] -= f * a[col * 4 + c]; inv[r * 4 + c] -= f * inv[col * 4 + c]; }
+    }
+  }
+  return inv;
+}
+function m4lookAt(eye, ctr, up) {
+  var f = v3norm([ctr[0] - eye[0], ctr[1] - eye[1], ctr[2] - eye[2]]);
+  var s = v3norm(v3cross(f, up));
+  var u = v3cross(s, f);
+  return [
+    s[0], s[1], s[2], -(s[0] * eye[0] + s[1] * eye[1] + s[2] * eye[2]),
+    u[0], u[1], u[2], -(u[0] * eye[0] + u[1] * eye[1] + u[2] * eye[2]),
+    -f[0], -f[1], -f[2], (f[0] * eye[0] + f[1] * eye[1] + f[2] * eye[2]),
+    0, 0, 0, 1
+  ];
+}
+function m4persp(fovDeg, aspect, n, f) {
+  var t = Math.tan(fovDeg * Math.PI / 360);
+  return [
+    1 / (aspect * t), 0, 0, 0,
+    0, 1 / t, 0, 0,
+    0, 0, -(f + n) / (f - n), -2 * f * n / (f - n),
+    0, 0, -1, 0
+  ];
+}
+function v3cross(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+function v3norm(a) { var l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }
+function matMini4(M) {
+  return f2(M[0]) + ' ' + f2(M[1]) + ' ' + f2(M[2]) + ' ' + f2(M[3]) + '\n' +
+         f2(M[4]) + ' ' + f2(M[5]) + ' ' + f2(M[6]) + ' ' + f2(M[7]) + '\n' +
+         f2(M[8]) + ' ' + f2(M[9]) + ' ' + f2(M[10]) + ' ' + f2(M[11]) + '\n' +
+         '  0    0    0    1';
+}
+
+// ============================================================
+// Canvas 2D 绘制工具（演示 1~2）
+// ============================================================
+function ctxOf(id) { return document.getElementById(id).getContext('2d'); }
+function drawGrid(ctx, W, H, ox, oy, unit) {
+  ctx.strokeStyle = PAL.grid; ctx.lineWidth = 1;
+  var gx, gy;
+  for (gx = ox % (unit / 2); gx < W; gx += unit / 2) {
+    ctx.beginPath(); ctx.moveTo(gx + .5, 0); ctx.lineTo(gx + .5, H); ctx.stroke();
+  }
+  for (gy = oy % (unit / 2); gy < H; gy += unit / 2) {
+    ctx.beginPath(); ctx.moveTo(0, gy + .5); ctx.lineTo(W, gy + .5); ctx.stroke();
+  }
+  ctx.strokeStyle = PAL.axis; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, oy + .5); ctx.lineTo(W, oy + .5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox + .5, 0); ctx.lineTo(ox + .5, H); ctx.stroke();
+}
+function arrow(ctx, x1, y1, x2, y2, color, lw, dash) {
+  ctx.save();
+  if (dash) ctx.setLineDash(dash);
+  ctx.strokeStyle = color; ctx.lineWidth = lw || 3;
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  ctx.setLineDash([]);
+  var a = Math.atan2(y2 - y1, x2 - x1), hl = 9 + (lw || 3) * 1.6;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - hl * Math.cos(a - .42), y2 - hl * Math.sin(a - .42));
+  ctx.lineTo(x2 - hl * Math.cos(a + .42), y2 - hl * Math.sin(a + .42));
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function dot(ctx, x, y, r, color, hollow) {
+  ctx.save();
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  if (hollow) { ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.fillStyle = PAL.bg; ctx.fill(); ctx.stroke(); }
+  else { ctx.fillStyle = color; ctx.fill(); }
+  ctx.restore();
+}
+function label(ctx, text, x, y, color, font) {
+  ctx.save();
+  ctx.font = font || '12px "JetBrains Mono", Consolas, monospace';
+  ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+function pointerPos(canvas, e) {
+  var r = canvas.getBoundingClientRect();
+  return [
+    (e.clientX - r.left) * (canvas.width / r.width),
+    (e.clientY - r.top) * (canvas.height / r.height)
+  ];
+}
+function bindSlider(id, valId, fmtFn, onChange) {
+  var el = document.getElementById(id), lab = document.getElementById(valId);
+  el.addEventListener('input', function() {
+    lab.textContent = fmtFn(el.value);
+    if (onChange) onChange(el.value);
+  });
+}
+function syncSlider(id, valId, value, fmtFn) {
+  var el = document.getElementById(id), lab = document.getElementById(valId);
+  el.value = value;
+  lab.textContent = fmtFn(value);
+}
+var DEGFMT = function(v) { return v + '°'; };
+
+// ============================================================
+// 3D 微引擎：轨道相机 + 透视投影 + 深度排序（演示 3~6）
+// ============================================================
+function make3D(canvas, opt) {
+  var s = {
+    canvas: canvas,
+    ctx: canvas.getContext('2d'),
+    W: canvas.width, H: canvas.height,
+    yaw: opt.yaw || -50, pitch: opt.pitch || 26, dist: opt.dist || 10,
+    target: opt.target || [0, 0, 0.5],
+    hit: null, onDrag: null, redraw: null,
+    _dragCtx: null, _orbiting: false, _last: null,
+    _V: null, _P: null
+  };
+  s.begin = function() {
+    var cp = Math.cos(s.pitch * Math.PI / 180), sp = Math.sin(s.pitch * Math.PI / 180);
+    var cy = Math.cos(s.yaw * Math.PI / 180), sy = Math.sin(s.yaw * Math.PI / 180);
+    var dir = [cp * cy, cp * sy, sp];
+    var eye = [s.target[0] + dir[0] * s.dist, s.target[1] + dir[1] * s.dist, s.target[2] + dir[2] * s.dist];
+    s._V = m4lookAt(eye, s.target, [0, 0, 1]);
+    s._P = m4persp(45, s.W / s.H, 0.3, 300);
+  };
+  s.proj = function(p) {
+    var v = m4ap(s._V, p);
+    var c = m4ap4(s._P, [v[0], v[1], v[2], 1]);
+    var w = c[3];
+    if (w <= 0.05) return null;
+    return { px: (c[0] / w + 1) / 2 * s.W, py: (1 - c[1] / w) / 2 * s.H, z: v[2] };
+  };
+  s.items = [];
+  s.item = function(z, fn) { s.items.push({ z: z, fn: fn }); };
+  s.flush = function() {
+    s.items.sort(function(a, b) { return a.z - b.z; }); // 远（更小 z）先画
+    s.items.forEach(function(it) { it.fn(s.ctx); });
+    s.items = [];
+  };
+  s.ray = function(px, py) {
+    var inv = m4inv(m4mul(s._P, s._V));
+    function unproj(nz) {
+      var v = m4ap4(inv, [px / s.W * 2 - 1, -(py / s.H * 2 - 1), nz, 1]);
+      return [v[0] / v[3], v[1] / v[3], v[2] / v[3]];
+    }
+    var a = unproj(-1), b = unproj(1);
+    var d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    return { o: a, d: v3norm(d) };
+  };
+  s.rayZ = function(ray, h) {
+    if (Math.abs(ray.d[2]) < 1e-6) return null;
+    var t = (h - ray.o[2]) / ray.d[2];
+    if (t <= 0) return null;
+    return [ray.o[0] + t * ray.d[0], ray.o[1] + t * ray.d[1], h];
+  };
+  canvas.style.cursor = 'grab';
+  canvas.addEventListener('pointerdown', function(e) {
+    var pos = pointerPos(canvas, e);
+    var consumed = false;
+    if (s.hit) consumed = s.hit(pos);
+    canvas.setPointerCapture(e.pointerId);
+    if (!consumed) { s._orbiting = true; }
+    s._last = pos;
+    canvas.style.cursor = consumed ? 'grabbing' : 'grab';
+  });
+  canvas.addEventListener('pointermove', function(e) {
+    var pos = pointerPos(canvas, e);
+    if (s._dragCtx != null) { if (s.onDrag) s.onDrag(s._dragCtx, pos); return; }
+    if (!s._orbiting) return;
+    var dx = pos[0] - s._last[0], dy = pos[1] - s._last[1];
+    s._last = pos;
+    s.yaw -= dx * 0.4;
+    s.pitch = Math.max(-10, Math.min(85, s.pitch + dy * 0.3));
+    if (s.redraw) s.redraw();
+  });
+  canvas.addEventListener('pointerup', function() { s._orbiting = false; s._dragCtx = null; canvas.style.cursor = 'grab'; });
+  canvas.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    s.dist = Math.max(2.5, Math.min(60, s.dist * (e.deltaY > 0 ? 1.12 : 0.89)));
+    if (s.redraw) s.redraw();
+  }, { passive: false });
+  return s;
+}
+// 3D 图元助手（自动投影 + 深度排序）
+function addLine3(sc, a, b, color, lw, dash) {
+  var pa = sc.proj(a), pb = sc.proj(b);
+  if (!pa || !pb) return;
+  var z = (pa.z + pb.z) / 2;
+  sc.item(z, function(ctx) {
+    ctx.save();
+    if (dash) ctx.setLineDash(dash);
+    ctx.strokeStyle = color; ctx.lineWidth = lw || 2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(pa.px, pa.py); ctx.lineTo(pb.px, pb.py); ctx.stroke();
+    ctx.restore();
+  });
+}
+function addArrow3(sc, a, b, color, lw, dash) {
+  var pa = sc.proj(a), pb = sc.proj(b);
+  if (!pa || !pb) return;
+  var z = (pa.z + pb.z) / 2;
+  sc.item(z, function(ctx) {
+    ctx.save();
+    if (dash) ctx.setLineDash(dash);
+    ctx.strokeStyle = color; ctx.lineWidth = lw || 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(pa.px, pa.py); ctx.lineTo(pb.px, pb.py); ctx.stroke();
+    ctx.setLineDash([]);
+    var ang = Math.atan2(pb.py - pa.py, pb.px - pa.px);
+    var hl = Math.max(6, Math.min(16, 90 / Math.max(0.6, -z)));
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(pb.px, pb.py);
+    ctx.lineTo(pb.px - hl * Math.cos(ang - .42), pb.py - hl * Math.sin(ang - .42));
+    ctx.lineTo(pb.px - hl * Math.cos(ang + .42), pb.py - hl * Math.sin(ang + .42));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  });
+}
+function addDot3(sc, p, r, color, hollow) {
+  var pa = sc.proj(p);
+  if (!pa) return;
+  var rr = Math.max(3, Math.min(r * 1.8, r * 9 / Math.max(1, -pa.z)));
+  sc.item(pa.z, function(ctx) { dot(ctx, pa.px, pa.py, rr, color, hollow); });
+}
+function addLabel3(sc, p, text, color, font, dx, dy) {
+  var pa = sc.proj(p);
+  if (!pa) return;
+  sc.item(pa.z - 0.001, function(ctx) { label(ctx, text, pa.px + (dx || 6), pa.py + (dy || -6), color, font); });
+}
+function addGroundGrid(sc, half) {
+  half = half || 5;
+  for (var i = -half; i <= half; i++) {
+    var col = (i === 0) ? PAL.axis : PAL.grid;
+    var lw = (i === 0) ? 1.6 : 1;
+    addLine3(sc, [i, -half, 0], [i, half, 0], col, lw);
+    addLine3(sc, [-half, i, 0], [half, i, 0], col, lw);
+  }
+}
+function addWorldAxes(sc, len) {
+  len = len || 5;
+  addArrow3(sc, [0, 0, 0], [len, 0, 0], PAL.dim, 2);
+  addArrow3(sc, [0, 0, 0], [0, len, 0], PAL.dim, 2);
+  addArrow3(sc, [0, 0, 0], [0, 0, len * 0.6], PAL.dim, 2);
+  addLabel3(sc, [len, 0, 0], '世界x', PAL.dim, '11px "Noto Sans SC","Microsoft YaHei",sans-serif', 4, 0);
+  addLabel3(sc, [0, len, 0], '世界y', PAL.dim, '11px "Noto Sans SC","Microsoft YaHei",sans-serif', 4, 0);
+}
+// 画一个 3D"帧"：原点 + 三支箭头
+function addFrame3(sc, M, len, strong, dashed, colors) {
+  colors = colors || { x: PAL.x, y: PAL.y, z: PAL.z, o: PAL.t };
+  var o = m4ap(M, [0, 0, 0]);
+  var ax = m4ap(M, [len, 0, 0]), ay = m4ap(M, [0, len, 0]), az = m4ap(M, [0, 0, len]);
+  var dash = dashed ? [6, 5] : null;
+  var lw = strong ? 4 : 2.4;
+  addArrow3(sc, o, ax, colors.x, lw, dash);
+  addArrow3(sc, o, ay, colors.y, lw, dash);
+  addArrow3(sc, o, az, colors.z, lw, dash);
+  addDot3(sc, o, strong ? 6.5 : 5, colors.o, true);
+  return { o: o, ax: ax, ay: ay, az: az };
+}
+
+// ============================================================
+// 演示 1：箭头旋转器（2D）
+// ============================================================
+(function() {
+  var canvas = document.getElementById('m1-canvas');
+  if (!canvas) return;
+  var ctx = ctxOf('m1-canvas');
+  var W = canvas.width, H = canvas.height;
+  var view = { ox: W / 2, oy: H / 2 + 24, unit: 104 };
+  var st = { theta: 30, playing: false };
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, W, H);
+    drawGrid(ctx, W, H, view.ox, view.oy, view.unit);
+    ctx.save();
+    ctx.strokeStyle = PAL.ghost; ctx.setLineDash([4, 6]); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(view.ox, view.oy, view.unit, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    var th = st.theta * Math.PI / 180, c = Math.cos(th), s = Math.sin(th);
+    if (Math.abs(st.theta) > 2) {
+      ctx.save();
+      ctx.strokeStyle = PAL.dim; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(view.ox, view.oy, 34, 0, -th, st.theta > 0);
+      ctx.stroke();
+      ctx.restore();
+      label(ctx, 'θ=' + st.theta + '°', view.ox + 40, view.oy - (st.theta >= 0 ? 22 : -22), PAL.dim, '13px "JetBrains Mono", Consolas, monospace');
+    }
+    arrow(ctx, view.ox, view.oy, view.ox + view.unit, view.oy, PAL.ghost, 2.5, [5, 5]);
+    if (document.getElementById('m1-showy').checked)
+      arrow(ctx, view.ox, view.oy, view.ox, view.oy - view.unit, PAL.ghost, 2.5, [5, 5]);
+    arrow(ctx, view.ox, view.oy, view.ox + c * view.unit, view.oy - s * view.unit, PAL.x, 4);
+    dot(ctx, view.ox + c * view.unit, view.oy - s * view.unit, 4.5, PAL.x);
+    label(ctx, 'x̂ 尖端 (' + f3(c) + ', ' + f3(s) + ')',
+      view.ox + c * view.unit + 10, view.oy - s * view.unit - 4, PAL.x, 'bold 12.5px "JetBrains Mono", Consolas, monospace');
+    if (document.getElementById('m1-showy').checked) {
+      arrow(ctx, view.ox, view.oy, view.ox - s * view.unit, view.oy - c * view.unit, PAL.y, 4);
+      dot(ctx, view.ox - s * view.unit, view.oy - c * view.unit, 4.5, PAL.y);
+      label(ctx, 'ŷ 尖端 (' + f3(-s) + ', ' + f3(c) + ')',
+        view.ox - s * view.unit + 10, view.oy - c * view.unit + 4, PAL.y, 'bold 12.5px "JetBrains Mono", Consolas, monospace');
+    }
+    label(ctx, '原点', view.ox + 6, view.oy + 16, PAL.dim, '11px "Noto Sans SC","Microsoft YaHei",sans-serif');
+    setMatCells('m1-mat', [f3(c), f3(-s), f3(s), f3(c)]);
+    document.getElementById('m1-readout').innerHTML =
+      'θ = ' + st.theta + '°<br>' +
+      'cosθ = ' + f3(c) + '　sinθ = ' + f3(s) + '<br>' +
+      '<span class="nx">x̂ 尖端 (' + f3(c) + ', ' + f3(s) + ') → 第1列</span><br>' +
+      (document.getElementById('m1-showy').checked
+        ? '<span class="ny">ŷ 尖端 (' + f3(-s) + ', ' + f3(c) + ') → 第2列</span>'
+        : '<span class="dim">（勾选第二支箭头查看第2列）</span>');
+  }
+  bindSlider('m1-angle', 'm1-angle-val', DEGFMT, function(v) { st.theta = +v; draw(); });
+  var demoCard = canvas.closest('.demo-card');
+  demoCard.querySelectorAll('button[data-deg]').forEach(function(b) {
+    b.addEventListener('click', function() {
+      st.theta = +b.getAttribute('data-deg');
+      syncSlider('m1-angle', 'm1-angle-val', st.theta, DEGFMT);
+      draw();
+    });
+  });
+  document.getElementById('m1-showy').addEventListener('change', draw);
+  document.getElementById('m1-play').addEventListener('click', function() {
+    st.playing = !st.playing;
+    this.classList.toggle('active', st.playing);
+    this.textContent = st.playing ? '停止' : '自动旋转';
+  });
+  (function loop() {
+    if (st.playing && !canvas._paused) {
+      st.theta += 0.6;
+      if (st.theta > 180) st.theta -= 360;
+      st.theta = Math.round(st.theta * 10) / 10;
+      syncSlider('m1-angle', 'm1-angle-val', Math.round(st.theta), DEGFMT);
+      draw();
+    }
+    requestAnimationFrame(loop);
+  })();
+  REDRAWS.push(draw);
+  draw();
+})();
+
+// ============================================================
+// 演示 2：点的配方（2D）
+// ============================================================
+(function() {
+  var canvas = document.getElementById('m2-canvas');
+  if (!canvas) return;
+  var ctx = ctxOf('m2-canvas');
+  var W = canvas.width, H = canvas.height;
+  var view = { ox: W / 2 - 40, oy: H / 2 + 30, unit: 74 };
+  var st = { theta: 45, P: [2, 1], t: -1 };
+  var drag = false;
+
+  function toPx(p) { return [view.ox + p[0] * view.unit, view.oy - p[1] * view.unit]; }
+  function toWorld(px) { return [(px[0] - view.ox) / view.unit, (view.oy - px[1]) / view.unit]; }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, W, H);
+    drawGrid(ctx, W, H, view.ox, view.oy, view.unit);
+    var th = st.theta * Math.PI / 180, c = Math.cos(th), s = Math.sin(th);
+    var col1 = [c, s], col2 = [-s, c];
+    arrow(ctx, view.ox, view.oy, view.ox + view.unit, view.oy, PAL.ghost, 2.5, [5, 5]);
+    arrow(ctx, view.ox, view.oy, view.ox, view.oy - view.unit, PAL.ghost, 2.5, [5, 5]);
+    arrow(ctx, view.ox, view.oy, view.ox + col1[0] * view.unit, view.oy - col1[1] * view.unit, PAL.x, 4);
+    arrow(ctx, view.ox, view.oy, view.ox + col2[0] * view.unit, view.oy - col2[1] * view.unit, PAL.y, 4);
+    var P = st.P;
+    var Pp = [P[0] * col1[0] + P[1] * col2[0], P[0] * col1[1] + P[1] * col2[1]];
+    var showPar = document.getElementById('m2-par').checked;
+    if (showPar) {
+      var ph = st.t < 0 ? 2 : st.t;
+      var kx = Math.min(ph, 1), ky = Math.max(0, Math.min(ph - 1, 1));
+      var xpart = [P[0] * col1[0] * kx, P[0] * col1[1] * kx];
+      var ypart = [P[1] * col2[0] * ky, P[1] * col2[1] * ky];
+      var a = toPx([0, 0]), b = toPx(xpart), d = toPx([xpart[0] + ypart[0], xpart[1] + ypart[1]]);
+      arrow(ctx, a[0], a[1], b[0], b[1], PAL.x, 2, [7, 5]);
+      if (ky > 0) {
+        arrow(ctx, b[0], b[1], d[0], d[1], PAL.y, 2, [7, 5]);
+        var e2 = toWorld(d);
+        if (!(kx >= 1 && ky >= 1)) label(ctx, '中途 (' + f2(e2[0]) + ', ' + f2(e2[1]) + ')', d[0] + 8, d[1] - 10, PAL.dim);
+      }
+      var yfull = toPx([P[1] * col2[0], P[1] * col2[1]]);
+      ctx.save(); ctx.strokeStyle = PAL.ghost; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+      ctx.beginPath(); ctx.moveTo(view.ox, view.oy); ctx.lineTo(yfull[0], yfull[1]); ctx.lineTo(d[0], d[1]); ctx.stroke();
+      ctx.restore();
+    }
+    var Ppx = toPx(P), Pppx = toPx(Pp);
+    dot(ctx, Ppx[0], Ppx[1], 5, PAL.ghost);
+    label(ctx, 'P (' + f2(P[0]) + ', ' + f2(P[1]) + ')', Ppx[0] + 9, Ppx[1] + 3, PAL.dim, '12.5px "JetBrains Mono", Consolas, monospace');
+    dot(ctx, Pppx[0], Pppx[1], 6.5, PAL.p);
+    label(ctx, "P' (" + f2(Pp[0]) + ', ' + f2(Pp[1]) + ')', Pppx[0] + 10, Pppx[1] - 8, PAL.p, 'bold 13px "JetBrains Mono", Consolas, monospace');
+    ctx.save(); ctx.strokeStyle = PAL.p; ctx.globalAlpha = .35; ctx.lineWidth = 1.5; ctx.setLineDash([3, 4]);
+    var r0 = Math.hypot(P[0], P[1]) * view.unit, a0 = Math.atan2(P[1], P[0]);
+    ctx.beginPath(); ctx.arc(view.ox, view.oy, r0, -a0, -(a0 + st.theta * Math.PI / 180), st.theta > 0); ctx.stroke();
+    ctx.restore();
+    document.getElementById('m2-arith').innerHTML =
+      'θ = ' + st.theta + '°　cos = ' + f3(c) + '　sin = ' + f3(s) + '<br>' +
+      'P = (' + f2(P[0]) + ', ' + f2(P[1]) + ')<hr>' +
+      "x' = <span class='nx'>" + f2(P[0]) + '×' + f3(c) + "</span> + <span class='ny'>" + f2(P[1]) + '×(' + f3(-s) + ")</span> = " + f2(Pp[0]) + '<br>' +
+      "y' = <span class='nx'>" + f2(P[0]) + '×' + f3(s) + "</span> + <span class='ny'>" + f2(P[1]) + '×' + f3(c) + "</span> = " + f2(Pp[1]) + '<hr>' +
+      "<span class='np'>P' = (" + f2(Pp[0]) + ', ' + f2(Pp[1]) + ')</span>';
+    document.getElementById('m2-p-val').textContent = '(' + f2(P[0]) + ', ' + f2(P[1]) + ')';
+  }
+  bindSlider('m2-angle', 'm2-angle-val', DEGFMT, function(v) { st.theta = +v; draw(); });
+  document.getElementById('m2-par').addEventListener('change', draw);
+  function setP(p) { st.P = [p[0], p[1]]; draw(); }
+  document.getElementById('m2-preset-a').addEventListener('click', function() { setP([2, 1]); });
+  document.getElementById('m2-preset-b').addEventListener('click', function() { setP([1, 0]); });
+  document.getElementById('m2-preset-c').addEventListener('click', function() { setP([0, 2]); });
+  canvas.addEventListener('pointerdown', function(e) {
+    var m = pointerPos(canvas, e), pp = toPx(st.P);
+    if (Math.hypot(m[0] - pp[0], m[1] - pp[1]) < 20) { drag = true; canvas.setPointerCapture(e.pointerId); }
+  });
+  canvas.addEventListener('pointermove', function(e) {
+    if (!drag) return;
+    var w = toWorld(pointerPos(canvas, e));
+    w[0] = Math.max(-3.6, Math.min(3.6, w[0])); w[1] = Math.max(-2.6, Math.min(2.6, w[1]));
+    st.P = [Math.round(w[0] * 8) / 8, Math.round(w[1] * 8) / 8]; draw();
+  });
+  canvas.addEventListener('pointerup', function() { drag = false; });
+  document.getElementById('m2-step').addEventListener('change', function() {
+    st.t = this.checked ? 0 : -1;
+    draw();
+  });
+  (function loop() {
+    if (st.t >= 0 && !canvas._paused) {
+      st.t += 0.012;
+      if (st.t > 2.9) st.t = 0;
+      draw();
+    }
+    requestAnimationFrame(loop);
+  })();
+  REDRAWS.push(draw);
+  draw();
+})();
+
+// ============================================================
+// 演示 3：3D 帧驾驶舱
+// ============================================================
+(function() {
+  var canvas = document.getElementById('m3-canvas');
+  if (!canvas) return;
+  var sc = make3D(canvas, { yaw: -42, pitch: 24, dist: 8.6, target: [0.9, 0.5, 0.6] });
+
+  function vals() {
+    return {
+      yaw: +document.getElementById('m3-yaw').value,
+      pitch: +document.getElementById('m3-pitch').value,
+      roll: +document.getElementById('m3-roll').value,
+      tx: +document.getElementById('m3-tx').value / 5,
+      ty: +document.getElementById('m3-ty').value / 5,
+      tz: +document.getElementById('m3-tz').value / 5
+    };
+  }
+  function draw() {
+    var v = vals();
+    var M = m4frame(v.yaw, v.pitch, v.roll, v.tx, v.ty, v.tz);
+    var ctx = sc.ctx;
+    ctx.clearRect(0, 0, sc.W, sc.H);
+    ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, sc.W, sc.H);
+    sc.begin();
+    addGroundGrid(sc, 4);
+    // 初始姿态（虚影）
+    addFrame3(sc, m4I(), 1.6, false, true, { x: PAL.ghost, y: PAL.ghost, z: PAL.ghost, o: PAL.ghost });
+    var f = addFrame3(sc, M, 1.6, true, false);
+    var ax = [M[0], M[4], M[8]], ay = [M[1], M[5], M[9]], az = [M[2], M[6], M[10]];
+    addLabel3(sc, f.ax, 'x̂(' + f2(ax[0]) + ',' + f2(ax[1]) + ',' + f2(ax[2]) + ')', PAL.x, 'bold 12px "JetBrains Mono", Consolas, monospace', 6, 0);
+    addLabel3(sc, f.ay, 'ŷ(' + f2(ay[0]) + ',' + f2(ay[1]) + ',' + f2(ay[2]) + ')', PAL.y, 'bold 12px "JetBrains Mono", Consolas, monospace', 6, 10);
+    addLabel3(sc, f.az, 'ẑ(' + f2(az[0]) + ',' + f2(az[1]) + ',' + f2(az[2]) + ')', PAL.z, 'bold 12px "JetBrains Mono", Consolas, monospace', 6, 0);
+    addLabel3(sc, f.o, '原点→第4列 (' + f2(v.tx) + ',' + f2(v.ty) + ',' + f2(v.tz) + ')', PAL.t, 'bold 11.5px "JetBrains Mono", Consolas, monospace', 14, 26);
+    sc.flush();
+    setMatCells('m3-mat', [
+      f3(M[0]), f3(M[1]), f3(M[2]), f3(M[3]),
+      f3(M[4]), f3(M[5]), f3(M[6]), f3(M[7]),
+      f3(M[8]), f3(M[9]), f3(M[10]), f3(M[11]),
+      '0', '0', '0', '1'
+    ]);
+    var axv = [['绕Z·yaw', v.yaw], ['绕X·pitch', v.pitch], ['绕Y·roll', v.roll]].filter(function(a) { return Math.abs(a[1]) > 1e-9; });
+    var angLine;
+    if (axv.length === 1) {
+      var tt = axv[0][1] * Math.PI / 180;
+      angLine = axv[0][0] + ' θ=' + axv[0][1] + '°　<span class="nx">cosθ=' + f3(Math.cos(tt)) + '</span>　<span class="ny">sinθ=' + f3(Math.sin(tt)) + '</span>';
+    } else if (axv.length === 0) angLine = '<span class="dim">θ=0：无旋转，前三列就是单位箭头</span>';
+    else angLine = '<span class="dim">多轴旋转：每个元素 = 三个角的 cos/sin 组合</span>';
+    document.getElementById('m3-readout').innerHTML =
+      'yaw=' + v.yaw + '° pitch=' + v.pitch + '° roll=' + v.roll + '°<br>' +
+      angLine + '<br>' +
+      '<span class="nx">x̂ 新家 (' + f2(ax[0]) + ', ' + f2(ax[1]) + ', ' + f2(ax[2]) + ') → 第1列</span><br>' +
+      '<span class="ny">ŷ 新家 (' + f2(ay[0]) + ', ' + f2(ay[1]) + ', ' + f2(ay[2]) + ') → 第2列</span><br>' +
+      '<span class="nz">ẑ 新家 (' + f2(az[0]) + ', ' + f2(az[1]) + ', ' + f2(az[2]) + ') → 第3列</span><br>' +
+      '<span class="nt">原点 (' + f2(v.tx) + ', ' + f2(v.ty) + ', ' + f2(v.tz) + ') → 第4列</span>';
+  }
+  ['m3-yaw', 'm3-pitch', 'm3-roll'].forEach(function(id) {
+    bindSlider(id, id + '-val', DEGFMT, draw);
+  });
+  bindSlider('m3-tx', 'm3-tx-val', function(v) { return (+v >= 0 ? '+' : '') + (+v / 5).toFixed(2); }, draw);
+  bindSlider('m3-ty', 'm3-ty-val', function(v) { return (+v >= 0 ? '+' : '') + (+v / 5).toFixed(2); }, draw);
+  bindSlider('m3-tz', 'm3-tz-val', function(v) { return (+v >= 0 ? '+' : '') + (+v / 5).toFixed(2); }, draw);
+  document.getElementById('m3-r0').addEventListener('click', function() {
+    ['m3-yaw', 'm3-pitch', 'm3-roll'].forEach(function(id) { syncSlider(id, id + '-val', 0, DEGFMT); });
+    draw();
+  });
+  REDRAWS.push(draw);
+  draw();
+})();
+
+// ============================================================
+// 演示 4：两套读数（3D）
+// ============================================================
+(function() {
+  var canvas = document.getElementById('m4-canvas');
+  if (!canvas) return;
+  var sc = make3D(canvas, { yaw: -55, pitch: 24, dist: 9.5, target: [0.4, 0.4, 0.8] });
+  var st = { yaw: 40, o: [-1.0, -0.4, 0.8], P: [2.0, 1.2, 2.8] };
+
+  function M() { return m4frame(st.yaw, 0, 0, st.o[0], st.o[1], st.o[2]); }
+  function draw() {
+    var m = M(), mi = m4inv(m);
+    var Pl = m4ap(mi, st.P);
+    var ctx = sc.ctx;
+    ctx.clearRect(0, 0, sc.W, sc.H);
+    ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, sc.W, sc.H);
+    sc.begin();
+    addGroundGrid(sc, 5);
+    addWorldAxes(sc, 5);
+    var f = addFrame3(sc, m, 1.6, true);
+    addLabel3(sc, f.ax, '本地 x̂', PAL.x, 'bold 12px "Noto Sans SC","Microsoft YaHei",sans-serif', 6, -2);
+    addLabel3(sc, f.ay, '本地 ŷ', PAL.y, 'bold 12px "Noto Sans SC","Microsoft YaHei",sans-serif', 6, 10);
+    addLabel3(sc, f.az, '本地 ẑ', PAL.z, 'bold 12px "Noto Sans SC","Microsoft YaHei",sans-serif', 6, 2);
+    // 配方阶梯：o → +x·x̂ → +y·ŷ → +z·ẑ = P
+    var b = m4ap(m, [Pl[0], 0, 0]);
+    var c2 = m4ap(m, [Pl[0], Pl[1], 0]);
+    var d2 = m4ap(m, [Pl[0], Pl[1], Pl[2]]);
+    addLine3(sc, st.o, b, PAL.x, 2, [6, 5]);
+    addLine3(sc, b, c2, PAL.y, 2, [6, 5]);
+    addLine3(sc, c2, d2, PAL.z, 2, [6, 5]);
+    addDot3(sc, b, 3, PAL.x); addDot3(sc, c2, 3, PAL.y);
+    addLabel3(sc, b, 'x=' + f2(Pl[0]), PAL.x, '11px "JetBrains Mono", Consolas, monospace', 4, 12);
+    // P 与影子
+    addDot3(sc, st.P, 6.5, PAL.p);
+    addLabel3(sc, st.P, 'P（事实）', PAL.p, 'bold 13px "Noto Sans SC","Microsoft YaHei",sans-serif', 10, -12);
+    if (document.getElementById('m4-active').checked) {
+      var Pa = m4ap(m, st.P);
+      addDot3(sc, Pa, 5.5, PAL.ghost, true);
+      addLabel3(sc, Pa, '影子 M·P世界 (' + f2(Pa[0]) + ',' + f2(Pa[1]) + ',' + f2(Pa[2]) + ')', PAL.dim, '11px "JetBrains Mono", Consolas, monospace', 8, 16);
+    }
+    sc.flush();
+    document.getElementById('m4-world').textContent = '(' + f2(st.P[0]) + ', ' + f2(st.P[1]) + ', ' + f2(st.P[2]) + ')';
+    document.getElementById('m4-local').textContent = '(' + f2(Pl[0]) + ', ' + f2(Pl[1]) + ', ' + f2(Pl[2]) + ')';
+    setMatCells('m4-mat', [
+      f3(m[0]), f3(m[1]), f3(m[2]), f3(m[3]),
+      f3(m[4]), f3(m[5]), f3(m[6]), f3(m[7]),
+      f3(m[8]), f3(m[9]), f3(m[10]), f3(m[11]),
+      '0', '0', '0', '1'
+    ]);
+    setMatCells('m4-mati', [
+      f3(mi[0]), f3(mi[1]), f3(mi[2]), f3(mi[3]),
+      f3(mi[4]), f3(mi[5]), f3(mi[6]), f3(mi[7]),
+      f3(mi[8]), f3(mi[9]), f3(mi[10]), f3(mi[11]),
+      '0', '0', '0', '1'
+    ]);
+    document.getElementById('m4-verify').innerHTML =
+      'P本地 (' + f2(Pl[0]) + ', ' + f2(Pl[1]) + ', ' + f2(Pl[2]) + ')<br>' +
+      '→ M·P本地 = (' + f2(d2[0]) + ', ' + f2(d2[1]) + ', ' + f2(d2[2]) + ')<br>' +
+      '≈ P世界 ✓（逆表再换回去，读数复原）';
+  }
+  bindSlider('m4-yaw', 'm4-yaw-val', DEGFMT, function(v) { st.yaw = +v; draw(); });
+  bindSlider('m4-oz', 'm4-oz-val', function(v) { st.o[2] = +v / 5; draw(); });
+  bindSlider('m4-pz', 'm4-pz-val', function(v) { st.P[2] = +v / 5; draw(); });
+  document.getElementById('m4-active').addEventListener('change', draw);
+  sc.hit = function(pos) {
+    sc.begin();
+    var po = sc.proj(st.o), pp = sc.proj(st.P);
+    if (pp && Math.hypot(pos[0] - pp.px, pos[1] - pp.py) < 22) { sc._dragCtx = { k: 'P' }; return true; }
+    if (po && Math.hypot(pos[0] - po.px, pos[1] - po.py) < 22) { sc._dragCtx = { k: 'o' }; return true; }
+    return false;
+  };
+  sc.onDrag = function(ctxd, pos) {
+    sc.begin();
+    var ray = sc.ray(pos[0], pos[1]);
+    var h = ctxd.k === 'P' ? st.P[2] : st.o[2];
+    var w = sc.rayZ(ray, h);
+    if (!w) return;
+    w[0] = Math.round(w[0] * 8) / 8; w[1] = Math.round(w[1] * 8) / 8;
+    if (ctxd.k === 'P') { st.P[0] = w[0]; st.P[1] = w[1]; }
+    else { st.o[0] = w[0]; st.o[1] = w[1]; }
+    draw();
+  };
+  sc.redraw = draw;
+  REDRAWS.push(draw);
+  draw();
+})();
+
+// ============================================================
+// 演示 5：3D 实例阵列
+// ============================================================
+(function() {
+  var canvas = document.getElementById('m5-canvas');
+  if (!canvas) return;
+  var sc = make3D(canvas, { yaw: -50, pitch: 30, dist: 12, target: [0, 0, 0.8] });
+  var SHAPE = [[0.5, 0, 0], [-0.15, 0.30, 0.10], [-0.32, 0, -0.08], [-0.15, -0.30, 0.10]];
+  var st = { sel: 0 };
+
+  function params() {
+    return {
+      N: +document.getElementById('m5-count').value,
+      R: +document.getElementById('m5-radius').value / 5,
+      spin: +document.getElementById('m5-spin').value,
+      wave: +document.getElementById('m5-wave').value / 5
+    };
+  }
+  function instMat(i, p) {
+    var a = i / p.N * 2 * Math.PI;
+    var deg = a * 180 / Math.PI + 90 + p.spin;
+    var h = 0.8 + p.wave * Math.sin(2 * a + 1.2);
+    return m4frame(deg, 0, 0, p.R * Math.cos(a), p.R * Math.sin(a), h);
+  }
+  function addTri(sc2, M, idx, fill, stroke, lw) {
+    var pts = idx.map(function(k) { return sc2.proj(m4ap(M, SHAPE[k])); });
+    if (pts.some(function(p) { return !p; })) return;
+    var z = (pts[0].z + pts[1].z + pts[2].z) / 3;
+    sc2.item(z, function(ctx) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(pts[0].px, pts[0].py);
+      ctx.lineTo(pts[1].px, pts[1].py);
+      ctx.lineTo(pts[2].px, pts[2].py);
+      ctx.closePath();
+      ctx.fillStyle = fill; ctx.fill();
+      ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke();
+      ctx.restore();
+    });
+  }
+  function draw() {
+    var p = params();
+    if (st.sel >= p.N) st.sel = 0;
+    var ctx = sc.ctx;
+    ctx.clearRect(0, 0, sc.W, sc.H);
+    ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, sc.W, sc.H);
+    sc.begin();
+    addGroundGrid(sc, 5);
+    for (var i = 0; i < p.N; i++) {
+      var M = instMat(i, p);
+      var sel = i === st.sel;
+      addTri(sc, M, [0, 1, 2], sel ? 'rgba(255,180,84,0.38)' : PAL.fillGhost, sel ? PAL.x : PAL.dim, sel ? 2.2 : 1.2);
+      addTri(sc, M, [0, 2, 3], sel ? 'rgba(255,180,84,0.38)' : PAL.fillGhost, sel ? PAL.x : PAL.dim, sel ? 2.2 : 1.2);
+      if (sel) {
+        var f = addFrame3(sc, M, 1.1, true);
+        addLabel3(sc, f.o, '⬤ 原点→第4列 (' + f2(M[3]) + ',' + f2(M[7]) + ',' + f2(M[11]) + ')', PAL.t, '11.5px "JetBrains Mono", Consolas, monospace', 10, 18);
+        setMatCells('m5-mat', [
+          f3(M[0]), f3(M[1]), f3(M[2]), f3(M[3]),
+          f3(M[4]), f3(M[5]), f3(M[6]), f3(M[7]),
+          f3(M[8]), f3(M[9]), f3(M[10]), f3(M[11]),
+          '0', '0', '0', '1'
+        ]);
+        document.getElementById('m5-which').textContent = '实例 #' + i + ' 的登记表 Mᵢ';
+        document.getElementById('m5-info').innerHTML =
+          '本地顶点(全部实例共用):<br>' +
+          SHAPE.map(function(s) { return '(' + f2(s[0]) + ',' + f2(s[1]) + ',' + f2(s[2]) + ')'; }).join('<br>') +
+          '<hr>机身上的世界读数 = Mᵢ·本地读数';
+      }
+    }
+    sc.flush();
+  }
+  sc.hit = function(pos) {
+    var p = params();
+    sc.begin();
+    var best = -1, bd = 44;
+    for (var i = 0; i < p.N; i++) {
+      var M = instMat(i, p);
+      var c = sc.proj(m4ap(M, [0, 0, 0]));
+      if (!c) continue;
+      var d = Math.hypot(pos[0] - c.px, pos[1] - c.py);
+      if (d < bd) { bd = d; best = i; }
+    }
+    if (best >= 0) { st.sel = best; draw(); return true; }
+    return false;
+  };
+  bindSlider('m5-count', 'm5-count-val', function(v) { return v; }, draw);
+  bindSlider('m5-radius', 'm5-radius-val', function(v) { return (+v / 5).toFixed(2); }, draw);
+  bindSlider('m5-spin', 'm5-spin-val', DEGFMT, draw);
+  bindSlider('m5-wave', 'm5-wave-val', function(v) { return (+v / 5).toFixed(2); }, draw);
+  REDRAWS.push(draw);
+  draw();
+})();
+
+// ============================================================
+// 演示 6：3D 全链路推演器（真实透视）
+// ============================================================
+(function() {
+  var canvas = document.getElementById('m6-canvas');
+  if (!canvas) return;
+  var sc = make3D(canvas, { yaw: -58, pitch: 24, dist: 13.5, target: [0.6, -0.2, 0.8] });
+  var VP = { x: 652, y: 396, w: 248, h: 156 };
+  var FOV = 50, NEAR = 1.5, FAR = 14;
+  // 相机基础朝向：本地 -z = 世界 -x（初始望向原点），本地 y = 世界 z（上）
+  var RBASE = [0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1];
+  var st = {
+    stage: 0,
+    parent: { th: 20, t: [-1.8, -0.6, 0.6] },
+    child: { th: -35, t: [1.6, 0.5, 0.35] },
+    cam: { yaw: -42, pitch: -16, t: [5.6, -4.0, 1.7] },
+    p0: [1.1, 0.5, 0.35]
+  };
+  var timer = null, orderShown = false;
+  var STAGES = ['子本地', '父本地', '世界', '摄像机', 'NDC(÷w)', '屏幕像素'];
+
+  function camM() {
+    var R = m4mul(m4rotZ(st.cam.yaw), m4mul(RBASE, m4rotX(st.cam.pitch)));
+    return m4mul(m4trans(st.cam.t[0], st.cam.t[1], st.cam.t[2]), R);
+  }
+  function mats() {
+    var Mc = m4frame(st.child.th, 0, 0, st.child.t[0], st.child.t[1], st.child.t[2]);
+    var Mp = m4frame(st.parent.th, 0, 0, st.parent.t[0], st.parent.t[1], st.parent.t[2]);
+    var Mv = camM();
+    return { Mc: Mc, Mp: Mp, Mv: Mv, V: m4inv(Mv) };
+  }
+  function projM() { return m4persp(FOV, VP.w / VP.h, NEAR, FAR); }
+  function chain() {
+    var m = mats();
+    var p1 = m4ap(m.Mc, st.p0);
+    var p2 = m4ap(m.Mp, p1);
+    var p3 = m4ap(m.V, p2);
+    var P = projM();
+    var clip = m4ap4(P, [p3[0], p3[1], p3[2], 1]);
+    var w = clip[3];
+    var ndc = w > 1e-6 ? [clip[0] / w, clip[1] / w, clip[2] / w] : null;
+    var px = ndc ? [VP.x + (ndc[0] + 1) / 2 * VP.w, VP.y + (1 - ndc[1]) / 2 * VP.h] : null;
+    var on = ndc && Math.abs(ndc[0]) <= 1 && Math.abs(ndc[1]) <= 1 && ndc[2] >= -1 && ndc[2] <= 1;
+    return { m: m, p1: p1, p2: p2, p3: p3, P: P, w: w, ndc: ndc, px: px, on: on };
+  }
+  function drawFrustum(m, strong) {
+    var R = m.Mv.slice();
+    R[3] = 0; R[7] = 0; R[11] = 0; // 去掉平移，只留旋转（方向用）
+    var o = [m.Mv[3], m.Mv[7], m.Mv[11]];
+    var fwd = v3norm(m4ap(R, [0, 0, -1]));
+    var right = m4ap(R, [1, 0, 0]);
+    var up = m4ap(R, [0, 1, 0]);
+    var t2 = Math.tan(FOV * Math.PI / 360);
+    function rect(d) {
+      var hh = t2 * d, hw = hh * (VP.w / VP.h);
+      var cx = [o[0] + fwd[0] * d, o[1] + fwd[1] * d, o[2] + fwd[2] * d];
+      return [[-1, 1], [1, 1], [1, -1], [-1, -1]].map(function(s) {
+        return [
+          cx[0] + right[0] * hw * s[0] + up[0] * hh * s[1],
+          cx[1] + right[1] * hw * s[0] + up[1] * hh * s[1],
+          cx[2] + right[2] * hw * s[0] + up[2] * hh * s[1]
+        ];
+      });
+    }
+    var rn = rect(NEAR), rf = rect(FAR);
+    var col = PAL.t, dash = [4, 4];
+    var i;
+    for (i = 0; i < 4; i++) {
+      addLine3(sc, rn[i], rn[(i + 1) % 4], col, strong ? 2.6 : 1.8, dash);
+      addLine3(sc, rf[i], rf[(i + 1) % 4], col, strong ? 2.6 : 1.8, dash);
+      addLine3(sc, rn[i], rf[i], col, strong ? 2.2 : 1.4, dash);
+    }
+    addLabel3(sc, rn[0], '视线 = −ẑ', PAL.t, 'bold 11.5px "Noto Sans SC","Microsoft YaHei",sans-serif', 4, 14);
+  }
+  function draw() {
+    var C = chain();
+    var ctx = sc.ctx;
+    var hi = function(s) { return st.stage === s; };
+    ctx.clearRect(0, 0, sc.W, sc.H);
+    ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, sc.W, sc.H);
+    sc.begin();
+    addGroundGrid(sc, 6);
+    if (hi(2)) {
+      addArrow3(sc, [0, 0, 0], [6, 0, 0], PAL.text, 3);
+      addArrow3(sc, [0, 0, 0], [0, 6, 0], PAL.text, 3);
+      addLabel3(sc, [6, 0, 0], '▲世界', PAL.text, 'bold 13px "Noto Sans SC","Microsoft YaHei",sans-serif', 6, 0);
+    }
+    var fc = addFrame3(sc, C.m.Mc, 1.3, hi(0) || hi(1));
+    var fp = addFrame3(sc, C.m.Mp, 1.5, hi(1) || hi(2));
+    addFrame3(sc, C.m.Mv, 1.1, hi(3) || hi(4));
+    drawFrustum(C.m, hi(3) || hi(4));
+    addLabel3(sc, fc.ax, '子帧', PAL.y, 'bold 12px "Noto Sans SC","Microsoft YaHei",sans-serif', 6, -4);
+    addLabel3(sc, fp.ax, '父帧', PAL.x, 'bold 12px "Noto Sans SC","Microsoft YaHei",sans-serif', 6, -4);
+    addDot3(sc, C.p2, 6.5, PAL.p);
+    var stVal = [st.p0, C.p1, C.p2, C.p3, null, null][st.stage];
+    var stName = STAGES[st.stage];
+    var stTxt = st.stage === 4
+      ? (C.ndc ? 'NDC(' + f2(C.ndc[0]) + ', ' + f2(C.ndc[1]) + ', ' + f2(C.ndc[2]) + ')' : 'w≤0')
+      : (st.stage === 5 ? (C.on ? '像素见视口' : '不在屏幕内') : '(' + f2(stVal[0]) + ', ' + f2(stVal[1]) + ', ' + f2(stVal[2]) + ')');
+    addLabel3(sc, C.p2, 'P[' + stName + '] ' + stTxt, PAL.p, 'bold 12px "JetBrains Mono", Consolas, monospace', 12, -14);
+    if (orderShown) {
+      var wrong = m4ap(m4mul(C.m.Mc, C.m.Mp), st.p0);
+      addDot3(sc, wrong, 5, PAL.dim, true);
+      addLabel3(sc, wrong, '✗ 反序落点', PAL.dim, '11.5px "Noto Sans SC","Microsoft YaHei",sans-serif', 8, 14);
+    }
+    sc.flush();
+    // 屏幕视口（屏幕空间覆盖层）
+    ctx.save();
+    ctx.fillStyle = PAL.t;
+    ctx.globalAlpha = hi(5) ? 0.18 : 0.07;
+    ctx.strokeStyle = PAL.t; ctx.lineWidth = hi(5) ? 2.5 : 1.5;
+    ctx.beginPath(); ctx.rect(VP.x, VP.y, VP.w, VP.h); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    label(ctx, '第5站 · 屏幕视口 ' + VP.w + '×' + VP.h + ' px（fov ' + FOV + '°）', VP.x + 8, VP.y + 14, PAL.t, 'bold 11.5px "Noto Sans SC","Microsoft YaHei",sans-serif');
+    // 把关键点也投影进视口：P（红）、父原点（橙）、子原点（绿）
+    function projInto(pWorld, color) {
+      var v = m4ap(C.m.V, pWorld);
+      var c = m4ap4(C.P, v);
+      if (c[3] <= 1e-6) return null;
+      var x = (c[0] / c[3] + 1) / 2, y = (1 - c[1] / c[3]) / 2;
+      if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+      dot(ctx, VP.x + x * VP.w, VP.y + y * VP.h, 3.5, color);
+    }
+    projInto(C.p2, PAL.p);
+    projInto([C.m.Mp[3], C.m.Mp[7], C.m.Mp[11]], PAL.x);
+    projInto([C.m.Mc[3], C.m.Mc[7], C.m.Mc[11]], PAL.y);
+    if (C.on && C.px) {
+      ctx.save();
+      ctx.strokeStyle = PAL.p; ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(C.px[0] - 10, C.px[1]); ctx.lineTo(C.px[0] + 10, C.px[1]);
+      ctx.moveTo(C.px[0], C.px[1] - 10); ctx.lineTo(C.px[0], C.px[1] + 10);
+      ctx.stroke(); ctx.restore();
+    } else {
+      label(ctx, C.w > 0 ? 'P 不在屏幕内（被裁剪）' : 'P 在相机背后（w≤0）', VP.x + 10, VP.y + VP.h - 12, PAL.dim, '11.5px "Noto Sans SC","Microsoft YaHei",sans-serif');
+    }
+    document.getElementById('m6-stage-name').textContent = '第 ' + st.stage + ' 站 · ' + STAGES[st.stage];
+    buildStageList(C);
+  }
+  function buildStageList(C) {
+    var rows = [
+      { name: '子本地', val: '(' + f2(st.p0[0]) + ', ' + f2(st.p0[1]) + ', ' + f2(st.p0[2]) + ')', mat: null, note: '出发点' },
+      { name: '父本地', val: '(' + f2(C.p1[0]) + ', ' + f2(C.p1[1]) + ', ' + f2(C.p1[2]) + ')', mat: C.m.Mc, note: '×M子' },
+      { name: '世界', val: '(' + f2(C.p2[0]) + ', ' + f2(C.p2[1]) + ', ' + f2(C.p2[2]) + ')', mat: C.m.Mp, note: '×M父' },
+      { name: '摄像机', val: '(' + f2(C.p3[0]) + ', ' + f2(C.p3[1]) + ', ' + f2(C.p3[2]) + ')', mat: C.m.V, note: '×V=M相机⁻¹（x右 y上 z后）' },
+      { name: 'NDC', val: C.ndc ? 'w=' + f2(C.w) + ' → (' + f2(C.ndc[0]) + ', ' + f2(C.ndc[1]) + ', ' + f2(C.ndc[2]) + ')' : 'w≤0', mat: C.P, note: '×投影矩阵，再 ÷w' },
+      { name: '屏幕像素', val: C.on ? 'px(' + (C.px[0] - VP.x).toFixed(1) + ', ' + (C.px[1] - VP.y).toFixed(1) + ')' : '不在屏幕内', mat: null, note: '视口变换' }
+    ];
+    var host = document.getElementById('m6-stage-list');
+    host.innerHTML = '';
+    rows.forEach(function(r, i) {
+      var div = document.createElement('div');
+      div.className = 'stage-row' + (i === st.stage ? ' active' : (i < st.stage ? ' done' : ''));
+      div.innerHTML = '<span class="st-no">' + i + '</span>' +
+        '<span class="st-name">' + r.name + '</span>' +
+        '<span class="st-val">' + r.val + '</span>' +
+        '<span style="color:var(--text-tertiary);font-size:11px">' + r.note + '</span>';
+      if (r.mat) {
+        var pre = document.createElement('span');
+        pre.className = 'st-mat';
+        pre.textContent = matMini4(r.mat);
+        div.appendChild(pre);
+      }
+      div.addEventListener('click', function() { st.stage = i; draw(); });
+      host.appendChild(div);
+    });
+  }
+  sc.hit = function(pos) {
+    sc.begin();
+    var C = chain();
+    var pp = sc.proj(C.p2);
+    var cO = [C.m.Mc[3], C.m.Mc[7], C.m.Mc[11]];
+    var pO = [C.m.Mp[3], C.m.Mp[7], C.m.Mp[11]];
+    var vO = [C.m.Mv[3], C.m.Mv[7], C.m.Mv[11]];
+    var pc = sc.proj(cO), pa = sc.proj(pO), pv = sc.proj(vO);
+    function near(p, r) { return p && Math.hypot(pos[0] - p.px, pos[1] - p.py) < r; }
+    if (near(pp, 24)) { sc._dragCtx = { k: 'P' }; return true; }
+    if (near(pc, 22)) { sc._dragCtx = { k: 'co' }; return true; }
+    if (near(pa, 22)) { sc._dragCtx = { k: 'po' }; return true; }
+    if (near(pv, 22)) { sc._dragCtx = { k: 'vo' }; return true; }
+    return false;
+  };
+  sc.onDrag = function(d, pos) {
+    sc.begin();
+    var C = chain();
+    var ray = sc.ray(pos[0], pos[1]);
+    var g = function(v) { return Math.round(v * 8) / 8; };
+    if (d.k === 'P') {
+      var w = sc.rayZ(ray, C.p2[2]);
+      if (!w) return;
+      var mi = m4inv(m4mul(C.m.Mp, C.m.Mc));
+      var l = m4ap(mi, [w[0], w[1], C.p2[2]]);
+      st.p0 = [g(l[0]), g(l[1]), g(l[2])];
+    } else if (d.k === 'co') {
+      var worldO = m4ap(C.m.Mp, st.child.t);
+      var w2 = sc.rayZ(ray, worldO[2]);
+      if (!w2) return;
+      var l2 = m4ap(m4inv(C.m.Mp), [w2[0], w2[1], worldO[2]]);
+      st.child.t = [g(l2[0]), g(l2[1]), g(l2[2])];
+    } else if (d.k === 'po') {
+      var w3 = sc.rayZ(ray, st.parent.t[2]);
+      if (!w3) return;
+      st.parent.t[0] = g(w3[0]); st.parent.t[1] = g(w3[1]);
+    } else if (d.k === 'vo') {
+      var w4 = sc.rayZ(ray, st.cam.t[2]);
+      if (!w4) return;
+      st.cam.t[0] = g(w4[0]); st.cam.t[1] = g(w4[1]);
+    }
+    draw();
+  };
+  sc.redraw = draw;
+  bindSlider('m6-thp', 'm6-thp-val', DEGFMT, function(v) { st.parent.th = +v; draw(); });
+  bindSlider('m6-thc', 'm6-thc-val', DEGFMT, function(v) { st.child.th = +v; draw(); });
+  bindSlider('m6-thv', 'm6-thv-val', DEGFMT, function(v) { st.cam.yaw = +v; draw(); });
+  bindSlider('m6-pv', 'm6-pv-val', DEGFMT, function(v) { st.cam.pitch = +v; draw(); });
+  bindSlider('m6-pz', 'm6-pz-val', function(v) {
+    sc.begin();
+    var C = chain();
+    var mi = m4inv(m4mul(C.m.Mp, C.m.Mc));
+    var l = m4ap(mi, [C.p2[0], C.p2[1], +v / 5]);
+    st.p0 = l;
+    draw();
+  });
+  document.getElementById('m6-prev').addEventListener('click', function() { st.stage = Math.max(0, st.stage - 1); draw(); });
+  document.getElementById('m6-next').addEventListener('click', function() { st.stage = Math.min(5, st.stage + 1); draw(); });
+  document.getElementById('m6-play').addEventListener('click', function() {
+    if (timer) { clearInterval(timer); timer = null; this.classList.remove('active'); this.textContent = '自动播放'; return; }
+    var btn = this;
+    btn.classList.add('active'); btn.textContent = '暂停';
+    if (st.stage >= 5) st.stage = 0;
+    timer = setInterval(function() {
+      if (canvas._paused) return;
+      st.stage++;
+      if (st.stage > 5) { st.stage = 5; clearInterval(timer); timer = null; btn.classList.remove('active'); btn.textContent = '自动播放'; }
+      draw();
+    }, 1000);
+  });
+  document.getElementById('m6-reset').addEventListener('click', function() {
+    st.stage = 0;
+    st.parent = { th: 20, t: [-1.8, -0.6, 0.6] };
+    st.child = { th: -35, t: [1.6, 0.5, 0.35] };
+    st.cam = { yaw: -42, pitch: -16, t: [5.6, -4.0, 1.7] };
+    st.p0 = [1.1, 0.5, 0.35];
+    orderShown = false;
+    document.getElementById('m6-order').style.display = 'none';
+    syncSlider('m6-thp', 'm6-thp-val', 20, DEGFMT);
+    syncSlider('m6-thc', 'm6-thc-val', -35, DEGFMT);
+    syncSlider('m6-thv', 'm6-thv-val', -42, DEGFMT);
+    syncSlider('m6-pv', 'm6-pv-val', -16, DEGFMT);
+    syncSlider('m6-pz', 'm6-pz-val', 9, function(v) { return (+v / 5).toFixed(2); });
+    draw();
+  });
+  document.getElementById('m6-swap').addEventListener('click', function() {
+    orderShown = true;
+    var C = chain();
+    var right = C.p2;
+    var wrong = m4ap(m4mul(C.m.Mc, C.m.Mp), st.p0);
+    var el = document.getElementById('m6-order');
+    el.style.display = 'block';
+    el.innerHTML =
+      '同样两张表（M父、M子），只是交换连乘顺序：<hr>' +
+      'M父·M子·p₀ = (' + f2(right[0]) + ', ' + f2(right[1]) + ', ' + f2(right[2]) + ')　✓ 正序（离点近的先作用）<br>' +
+      'M子·M父·p₀ = (' + f2(wrong[0]) + ', ' + f2(wrong[1]) + ', ' + f2(wrong[2]) + ')　✗ 反序（画布上的 ✗ 幽灵点）<br>' +
+      '差了 (' + f2(right[0] - wrong[0]) + ', ' + f2(right[1] - wrong[1]) + ', ' + f2(right[2] - wrong[2]) + ') —— 顺序是变换语义的一部分';
+    draw();
+  });
+  REDRAWS.push(draw);
+  draw();
+})();
+
+// 初始化调色板并首绘
+refreshPalette();
+REDRAWS.forEach(function(f) { f(); });
+</script>
+</body>
+</html>
