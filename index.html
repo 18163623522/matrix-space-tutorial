@@ -2487,6 +2487,14 @@ function addFrame3(sc, M, len, strong, dashed, colors) {
 // 初始化调色板并首绘
 refreshPalette();
 REDRAWS.forEach(function(f) { f(); });
+
+// 主题跟随：matrix-family 中心页广播切换主题
+window.addEventListener("message", function(e) {
+  if (e.data && e.data.type === "mf-theme" && (e.data.theme === "light" || e.data.theme === "dark")) {
+    var cur = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+    if (cur !== e.data.theme && typeof toggleTheme === "function") toggleTheme();
+  }
+});
 </script>
 </body>
 </html>
