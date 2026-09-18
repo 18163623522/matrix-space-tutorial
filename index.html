@@ -303,6 +303,23 @@ table.mx td.cz { color: var(--accent-cyan); }
 table.mx td.ct { color: var(--accent-purple); }
 table.mx td.ghost { color: var(--text-tertiary); }
 table.mx.dim td { opacity: 0.45; }
+/* ---- 实时矩阵表（live）：列头 + 行标 + 参与变化高亮（与盒课/实验室同款） ---- */
+table.mx.live td { padding: 6px 10px; min-width: 50px; font-size: 15px; }
+table.mx td.mxh {
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  font-size: 10.5px; font-weight: 700; text-align: center; line-height: 1.5;
+  padding: 4px 5px 6px; white-space: nowrap; min-width: 0;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  border-bottom: 2px solid currentColor; border-radius: 7px 7px 0 0;
+}
+table.mx td.mxh small { font-weight: 500; font-size: 9.5px; opacity: .8; display: block; }
+table.mx td.mxcorner { font-size: 9.5px; color: var(--text-tertiary); text-align: right; padding: 0 5px 2px 0; vertical-align: bottom; white-space: nowrap; min-width: 0; }
+table.mx td.mxrl { font-size: 10px; color: var(--text-tertiary); text-align: right; padding-right: 6px; padding-left: 0; vertical-align: middle; white-space: nowrap; min-width: 0; }
+table.mx td.cx { background: color-mix(in srgb, var(--accent-orange) 7%, transparent); }
+table.mx td.cy { background: color-mix(in srgb, var(--accent-green) 7%, transparent); }
+table.mx td.cz { background: color-mix(in srgb, var(--accent-cyan) 7%, transparent); }
+table.mx td.ct { background: color-mix(in srgb, var(--accent-purple) 7%, transparent); }
+table.mx td.chg { background: color-mix(in srgb, currentColor 20%, transparent); box-shadow: inset 0 -4px 0 currentColor; }
 .mx-caption { text-align: center; font-size: 12px; color: var(--text-tertiary); margin-bottom: 8px; }
 
 /* ---- 数值推演面板 ---- */
@@ -611,12 +628,10 @@ table.mx.dim td { opacity: 0.45; }
       <div class="df-right">
         <div class="mx-caption">旋转矩阵 R(θ)（颜色 = 来源箭头）</div>
         <div class="mx-wrap">
-          <div class="mx-b l"></div>
-          <table class="mx" id="m1-mat">
-            <tr><td class="cx">1.000</td><td class="cy">0.000</td></tr>
-            <tr><td class="cx">0.000</td><td class="cy">1.000</td></tr>
-          </table>
-          <div class="mx-b r"></div>
+                    <table class="mx live" id="m1-mat"><tr><td class="mxcorner">读↘</td><td class="mxh cx">第1列<small>x̂ 新家</small></td><td class="mxh cy">第2列<small>ŷ 新家</small></td></tr>
+<tr><td class="mxrl">x 读数</td><td class="cx dcell">1.000</td><td class="cy dcell">0.000</td></tr>
+<tr><td class="mxrl">y 读数</td><td class="cx dcell">0.000</td><td class="cy dcell">1.000</td></tr></table>
+          
         </div>
         <div class="num-panel" id="m1-readout"></div>
       </div>
@@ -823,7 +838,15 @@ table.mx.dim td { opacity: 0.45; }
   <div class="knowledge-box">
     <div class="kb-title">矩阵布局总纲（背这一句就够了）</div>
     <p style="text-align:center;font-size:16px;"><b>矩阵 = [ 箭头₁ | 箭头₂ | 箭头₃ | 原点 ]</b></p>
-    <p>前三列（橙/绿/青）= 三支箭头的新家；第四列（蓝）= 原点的新家；最后一行 <code>0,0,0,1</code> 是固定脚手架。2D 的 3×3 是它的缩水版。</p>
+    <p>前三列（橙/绿/青）= 三支箭头的新家；第四列（蓝）= 原点的新家。2D 的 3×3 是它的缩水版。</p>
+  </div>
+
+  <div class="callout callout-info">
+    <strong>最后一行 w（恒 0,0,0,1）是干嘛的</strong>：齐次坐标的"脚手架"，永远不用动——前三个 <b>0</b> 挡住平移反向污染箭头（箭头是纯方向，搬家不该改变朝向）；最后的 <b>1</b> 让第四分量 w=1 的点能"接住"第 4 列的平移。由此区分两种东西：<b>位置 w=1</b>（会被搬家），<b>纯方向 w=0</b>（平移对它无效——法线、朝向就是方向）。透视投影会故意改写这一行，除以 w 就得到近大远小（5.2 节）。
+  </div>
+
+  <div class="callout callout-tip">
+    <strong>读实时矩阵的两个新指示</strong>（本页所有演示已启用，与《盒子的矩阵课》《实验室》同款）：① 表格顶部的彩色列头与左侧行标——竖着读一列 = 一支箭头的新家；② <b>带下划线加亮的格子 = 参与了变化</b>（数值离开了单位矩阵）：没有变换时一个都不亮，转/拉/搬之后亮起的格数恰好等于参与该动作的格子数。
   </div>
 
   <div class="demo-card">
@@ -838,14 +861,12 @@ table.mx.dim td { opacity: 0.45; }
       <div class="df-right">
         <div class="mx-caption">这个帧的登记表（4×4）</div>
         <div class="mx-wrap">
-          <div class="mx-b l"></div>
-          <table class="mx" id="m3-mat">
-            <tr><td class="cx">1</td><td class="cy">0</td><td class="cz">0</td><td class="ct">0</td></tr>
-            <tr><td class="cx">0</td><td class="cy">1</td><td class="cz">0</td><td class="ct">0</td></tr>
-            <tr><td class="cx">0</td><td class="cy">0</td><td class="cz">1</td><td class="ct">0</td></tr>
-            <tr><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">1</td></tr>
-          </table>
-          <div class="mx-b r"></div>
+                    <table class="mx live" id="m3-mat"><tr><td class="mxcorner">读↘</td><td class="mxh cx">第1列<small>x̂ 新家</small></td><td class="mxh cy">第2列<small>ŷ 新家</small></td><td class="mxh cz">第3列<small>ẑ 新家</small></td><td class="mxh ct">第4列<small>原点新家</small></td></tr>
+<tr><td class="mxrl">x 读数</td><td class="cx dcell">1</td><td class="cy dcell">0</td><td class="cz dcell">0</td><td class="ct dcell">0</td></tr>
+<tr><td class="mxrl">y 读数</td><td class="cx dcell">0</td><td class="cy dcell">1</td><td class="cz dcell">0</td><td class="ct dcell">0</td></tr>
+<tr><td class="mxrl">z 读数</td><td class="cx dcell">0</td><td class="cy dcell">0</td><td class="cz dcell">1</td><td class="ct dcell">0</td></tr>
+<tr><td class="mxrl">w</td><td class="ghost dcell">0</td><td class="ghost dcell">0</td><td class="ghost dcell">0</td><td class="ghost dcell">1</td></tr></table>
+          
         </div>
         <div class="num-panel" id="m3-readout"></div>
       </div>
@@ -865,6 +886,7 @@ table.mx.dim td { opacity: 0.45; }
         <span class="slider-value" id="m3-roll-val">0°</span>
         <label>复位旋转</label>
         <button class="btn" id="m3-r0">yaw/pitch/roll → 0</button>
+        <label class="inline-cb" style="margin-left:10px"><input type="checkbox" id="m3-box" checked> 显示方盒子（钉在帧上，随帧变形）</label>
       </div>
       <div class="slider-row">
         <label>平移 tx</label>
@@ -948,23 +970,21 @@ table.mx.dim td { opacity: 0.45; }
       <div class="df-right">
         <div class="mx-caption">M（本地→世界）</div>
         <div class="mx-wrap">
-          <div class="mx-b l"></div>
-          <table class="mx" id="m4-mat">
-            <tr><td class="cx">1</td><td class="cy">0</td><td class="cz">0</td><td class="ct">0</td></tr>
-            <tr><td class="cx">0</td><td class="cy">1</td><td class="cz">0</td><td class="ct">0</td></tr>
-            <tr><td class="cx">0</td><td class="cy">0</td><td class="cz">1</td><td class="ct">0</td></tr>
-            <tr><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">1</td></tr>
-          </table>
-          <div class="mx-b r"></div>
+                    <table class="mx live" id="m4-mat"><tr><td class="mxcorner">读↘</td><td class="mxh cx">第1列<small>x̂ 新家</small></td><td class="mxh cy">第2列<small>ŷ 新家</small></td><td class="mxh cz">第3列<small>ẑ 新家</small></td><td class="mxh ct">第4列<small>原点新家</small></td></tr>
+<tr><td class="mxrl">x 读数</td><td class="cx dcell">1</td><td class="cy dcell">0</td><td class="cz dcell">0</td><td class="ct dcell">0</td></tr>
+<tr><td class="mxrl">y 读数</td><td class="cx dcell">0</td><td class="cy dcell">1</td><td class="cz dcell">0</td><td class="ct dcell">0</td></tr>
+<tr><td class="mxrl">z 读数</td><td class="cx dcell">0</td><td class="cy dcell">0</td><td class="cz dcell">1</td><td class="ct dcell">0</td></tr>
+<tr><td class="mxrl">w</td><td class="ghost dcell">0</td><td class="ghost dcell">0</td><td class="ghost dcell">0</td><td class="ghost dcell">1</td></tr></table>
+          
         </div>
         <div class="mx-caption">M⁻¹（世界→本地，逆表）</div>
         <div class="mx-wrap">
           <div class="mx-b l"></div>
           <table class="mx dim" id="m4-mati">
-            <tr><td class="cx">1</td><td class="cy">0</td><td class="cz">0</td><td class="ct">0</td></tr>
-            <tr><td class="cx">0</td><td class="cy">1</td><td class="cz">0</td><td class="ct">0</td></tr>
-            <tr><td class="cx">0</td><td class="cy">0</td><td class="cz">1</td><td class="ct">0</td></tr>
-            <tr><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">1</td></tr>
+            <tr><td class="cx dcell">1</td><td class="cy dcell">0</td><td class="cz dcell">0</td><td class="ct dcell">0</td></tr>
+            <tr><td class="cx dcell">0</td><td class="cy dcell">1</td><td class="cz dcell">0</td><td class="ct dcell">0</td></tr>
+            <tr><td class="cx dcell">0</td><td class="cy dcell">0</td><td class="cz dcell">1</td><td class="ct dcell">0</td></tr>
+            <tr><td class="ghost dcell">0</td><td class="ghost dcell">0</td><td class="ghost dcell">0</td><td class="ghost dcell">1</td></tr>
           </table>
           <div class="mx-b r"></div>
         </div>
@@ -1111,14 +1131,12 @@ table.mx.dim td { opacity: 0.45; }
       <div class="df-right">
         <div class="mx-caption" id="m5-which">选中实例的登记表 Mᵢ</div>
         <div class="mx-wrap">
-          <div class="mx-b l"></div>
-          <table class="mx" id="m5-mat">
-            <tr><td class="cx">1</td><td class="cy">0</td><td class="cz">0</td><td class="ct">0</td></tr>
-            <tr><td class="cx">0</td><td class="cy">1</td><td class="cz">0</td><td class="ct">0</td></tr>
-            <tr><td class="cx">0</td><td class="cy">0</td><td class="cz">1</td><td class="ct">0</td></tr>
-            <tr><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">0</td><td class="ghost">1</td></tr>
-          </table>
-          <div class="mx-b r"></div>
+                    <table class="mx live" id="m5-mat"><tr><td class="mxcorner">读↘</td><td class="mxh cx">第1列<small>x̂ 新家</small></td><td class="mxh cy">第2列<small>ŷ 新家</small></td><td class="mxh cz">第3列<small>ẑ 新家</small></td><td class="mxh ct">第4列<small>原点新家</small></td></tr>
+<tr><td class="mxrl">x 读数</td><td class="cx dcell">1</td><td class="cy dcell">0</td><td class="cz dcell">0</td><td class="ct dcell">0</td></tr>
+<tr><td class="mxrl">y 读数</td><td class="cx dcell">0</td><td class="cy dcell">1</td><td class="cz dcell">0</td><td class="ct dcell">0</td></tr>
+<tr><td class="mxrl">z 读数</td><td class="cx dcell">0</td><td class="cy dcell">0</td><td class="cz dcell">1</td><td class="ct dcell">0</td></tr>
+<tr><td class="mxrl">w</td><td class="ghost dcell">0</td><td class="ghost dcell">0</td><td class="ghost dcell">0</td><td class="ghost dcell">1</td></tr></table>
+          
         </div>
         <div class="num-panel" id="m5-info">点击画布中的任意一架…</div>
       </div>
@@ -1465,11 +1483,18 @@ function ap(M, x, y) {
 }
 function f3(n) { return (Math.abs(n) < 1e-4 ? 0 : n).toFixed(3); }
 function f2(n) { return (Math.abs(n) < 1e-4 ? 0 : n).toFixed(2); }
-function setMatCells(tableId, values) {
+function setMatCells(tableId, values, ncols) {
+  ncols = ncols || 4;
   var t = document.getElementById(tableId);
   if (!t) return;
-  var tds = t.querySelectorAll('td');
-  for (var i = 0; i < tds.length && i < values.length; i++) tds[i].textContent = values[i];
+  var tds = t.querySelectorAll('td.dcell');
+  for (var i = 0; i < tds.length && i < values.length; i++) {
+    tds[i].textContent = values[i];
+    // 参与变化高亮：数值离开单位矩阵的格子加列色下划线
+    var r = Math.floor(i / ncols), c = i % ncols;
+    var v = parseFloat(values[i]);
+    if (!isNaN(v)) tds[i].classList.toggle('chg', Math.abs(v - (r === c ? 1 : 0)) > 5e-3);
+  }
 }
 function matMini(M) {
   return f2(M[0]) + ' ' + f2(M[1]) + ' ' + f2(M[2]) + '\n' +
@@ -1759,12 +1784,22 @@ function addLabel3(sc, p, text, color, font, dx, dy) {
 }
 function addGroundGrid(sc, half) {
   half = half || 5;
-  for (var i = -half; i <= half; i++) {
+  var i;
+  for (i = -half; i <= half; i++) {
     var col = (i === 0) ? PAL.axis : PAL.grid;
     var lw = (i === 0) ? 1.6 : 1;
     addLine3(sc, [i, -half, 0], [i, half, 0], col, lw);
     addLine3(sc, [-half, i, 0], [half, i, 0], col, lw);
   }
+  // 数值刻度（与盒课/实验室同款）：x / y / z 轴整数位置标数字
+  var F = '10px "JetBrains Mono", Consolas, monospace';
+  for (i = 1; i <= half; i++) {
+    addLabel3(sc, [i, 0, 0], String(i), PAL.dim, F, -3, 10);
+    addLabel3(sc, [-i, 0, 0], '-' + i, PAL.dim, F, -3, 10);
+    addLabel3(sc, [0, i, 0], String(i), PAL.dim, F, -12, 0);
+    addLabel3(sc, [0, -i, 0], '-' + i, PAL.dim, F, -12, 0);
+  }
+  for (i = 1; i <= Math.min(half, 3); i++) addLabel3(sc, [0, 0, i], String(i), PAL.dim, F, -12, 0);
 }
 function addWorldAxes(sc, len) {
   len = len || 5;
@@ -1786,6 +1821,52 @@ function addFrame3(sc, M, len, strong, dashed, colors) {
   addArrow3(sc, o, az, colors.z, lw, dash);
   addDot3(sc, o, strong ? 6.5 : 5, colors.o, true);
   return { o: o, ax: ax, ay: ay, az: az };
+}
+// 方盒子（与盒课/实验室同款）：钉在帧上的盒体——帧是物体自身坐标，盒子跟着变形；ghost=true 画原始位置虚影
+function mxHexA(hex, a) {
+  var m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return hex;
+  var n = parseInt(m[1], 16);
+  return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+}
+function addFrameBox(sc, M, ghost) {
+  var h = 0.42;
+  var COR = [];
+  for (var k = 0; k < 8; k++) COR.push([k & 1 ? h : -h, k & 2 ? h : -h, k & 4 ? h : -h]);
+  var world = COR.map(function(c) { return m4ap(M, c); });
+  if (ghost) {
+    for (var a = 0; a < 8; a++) for (var b = a + 1; b < 8; b++) {
+      var xb = a ^ b;
+      if (xb === 1 || xb === 2 || xb === 4) addLine3(sc, COR[a], COR[b], PAL.ghost, 1.2, [4, 4]);
+    }
+    return;
+  }
+  var FACES = [
+    { idx: [1, 5, 7, 3], col: PAL.x, a: 0.22 },
+    { idx: [0, 2, 6, 4], col: PAL.x, a: 0.07 },
+    { idx: [2, 3, 7, 6], col: PAL.y, a: 0.22 },
+    { idx: [0, 4, 5, 1], col: PAL.y, a: 0.07 },
+    { idx: [4, 6, 7, 5], col: PAL.z, a: 0.22 },
+    { idx: [0, 1, 3, 2], col: PAL.z, a: 0.07 }
+  ];
+  FACES.forEach(function(f) {
+    var pts = f.idx.map(function(i) { return sc.proj(world[i]); });
+    if (pts.some(function(p) { return !p; })) return;
+    var zc = (pts[0].z + pts[1].z + pts[2].z + pts[3].z) / 4;
+    sc.item(zc, function(ctx) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(pts[0].px, pts[0].py);
+      for (var j = 1; j < 4; j++) ctx.lineTo(pts[j].px, pts[j].py);
+      ctx.closePath();
+      ctx.fillStyle = mxHexA(f.col, f.a);
+      ctx.fill();
+      ctx.strokeStyle = mxHexA(f.col, 0.55);
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.restore();
+    });
+  });
 }
 
 // ============================================================
@@ -1831,7 +1912,7 @@ function addFrame3(sc, M, len, strong, dashed, colors) {
         view.ox - s * view.unit + 10, view.oy - c * view.unit + 4, PAL.y, 'bold 12.5px "JetBrains Mono", Consolas, monospace');
     }
     label(ctx, '原点', view.ox + 6, view.oy + 16, PAL.dim, '11px "Noto Sans SC","Microsoft YaHei",sans-serif');
-    setMatCells('m1-mat', [f3(c), f3(-s), f3(s), f3(c)]);
+    setMatCells('m1-mat', [f3(c), f3(-s), f3(s), f3(c)], 2);
     document.getElementById('m1-readout').innerHTML =
       'θ = ' + st.theta + '°<br>' +
       'cosθ = ' + f3(c) + '　sinθ = ' + f3(s) + '<br>' +
@@ -1992,7 +2073,10 @@ function addFrame3(sc, M, len, strong, dashed, colors) {
     addGroundGrid(sc, 4);
     // 初始姿态（虚影）
     addFrame3(sc, m4I(), 1.6, false, true, { x: PAL.ghost, y: PAL.ghost, z: PAL.ghost, o: PAL.ghost });
+    // 方盒子（钉在帧上，随帧变形）——帧就是物体的自身坐标，盒子跟着走
+    if (document.getElementById('m3-box').checked) addFrameBox(sc, m4I(), true);
     var f = addFrame3(sc, M, 1.6, true, false);
+    if (document.getElementById('m3-box').checked) addFrameBox(sc, M, false);
     var ax = [M[0], M[4], M[8]], ay = [M[1], M[5], M[9]], az = [M[2], M[6], M[10]];
     addLabel3(sc, f.ax, 'x̂(' + f2(ax[0]) + ',' + f2(ax[1]) + ',' + f2(ax[2]) + ')', PAL.x, 'bold 12px "JetBrains Mono", Consolas, monospace', 6, 0);
     addLabel3(sc, f.ay, 'ŷ(' + f2(ay[0]) + ',' + f2(ay[1]) + ',' + f2(ay[2]) + ')', PAL.y, 'bold 12px "JetBrains Mono", Consolas, monospace', 6, 10);
@@ -2030,6 +2114,7 @@ function addFrame3(sc, M, len, strong, dashed, colors) {
     ['m3-yaw', 'm3-pitch', 'm3-roll'].forEach(function(id) { syncSlider(id, id + '-val', 0, DEGFMT); });
     draw();
   });
+  document.getElementById('m3-box').addEventListener('change', draw);
   REDRAWS.push(draw);
   draw();
 })();
